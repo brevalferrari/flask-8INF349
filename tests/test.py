@@ -205,4 +205,3 @@ def test_Commande_Produit_Hors_Stock(client):
         }
     }, "Le message d'erreur retourné est incorrect"
 
-    
