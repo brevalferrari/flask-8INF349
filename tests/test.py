@@ -45,24 +45,6 @@ def test_liste_produits(client):
     }
     assert attendu == response.data, "test failed"
 
-
-
-# -*- coding: utf-8 -*-
-import pytest
-from inf349.views import calculate_shipping_price, is_card_accepted
-from inf349.models import Order, Product
-
-
-@pytest.fixture
-def client():
-    """Création d'un client de test avec une base SQLite en mémoire"""
-    from inf349 import create_app
-    app = create_app({"TESTING": True, "DATABASE": ":memory:"})
-    
-    with app.app_context():
-        yield app.test_client()
-
-
 # Test des fonctions métiers (calcul prix livraison & carte de crédit)
 def test_calculate_shipping_price():
     assert calculate_shipping_price(100) == 5
@@ -181,3 +163,46 @@ def test_payment_declined(client):
     assert response.status_code == 422
     data = response.get_json()
     assert data["errors"]["credit_card"]["code"] == "card-declined"
+
+def test_Nouvelle_Commande(client):
+    response: dict = client.post("/order",
+    attendu = {
+        "product": { "id": 123, "quantity": 2 }
+    })
+    # assert attendu == response.data, "missing-fields"
+    assert response.status_code == 302, "La commande devrait être créée avec un status 302"
+    assert "Location" in response.headers, "La réponse doit contenir l'en-tête 'Location'"
+
+def test_Commande_Sans_Produit(client):
+    # Envoi d'une requête vide (erreur attendue)
+    response = client.post("/order", json={})
+
+    # Vérification du code de statut et du message d'erreur attendu
+    assert response.status_code == 422, "L'API devrait retourner une erreur 422 si 'product' est manquant"
+    assert response.json == {
+        "errors": {
+            "product": {
+                "code": "missing-fields",
+                "name": "La création d'une commande nécessite un produit"
+            }
+        }
+    }, "Le message d'erreur retourné est incorrect"
+
+def test_Commande_Produit_Hors_Stock(client):
+    # Supposons que le produit 999 est hors stock
+    response = client.post("/order", json={
+        "product": { "id": 999, "quantity": 1 }
+    })
+
+    # Vérification du code de statut et du message d'erreur attendu
+    assert response.status_code == 422, "L'API devrait retourner une erreur 422 si le produit n'est pas en stock"
+    assert response.json == {
+        "errors": {
+            "product": {
+                "code": "out-of-inventory",
+                "name": "Le produit demandé n'est pas en inventaire"
+            }
+        }
+    }, "Le message d'erreur retourné est incorrect"
+
+    
