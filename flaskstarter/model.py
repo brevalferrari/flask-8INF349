@@ -80,6 +80,20 @@ class Order(Model):
     class Meta:
         database = db
 
+def serialize_products(product: Product)-> dict: 
+    return {
+        "name": product.name,
+        "id": product.get_id(),
+        "in_stock": bool(product.in_stock),
+        "description": product.description,
+        "price": product.price,
+        "weight": product.weight,
+        "image": product.image
+    }
+
+def get_products()-> list[dict]: 
+    return map(serialize_products, Product.select())
+
 def add_test_product(name: str, price: float, weight: int, image: str):
     Product(name=name, price=price, weight=weight, image=image).save()
 
@@ -87,3 +101,13 @@ def add_order(product_id: int, quantity: int):
     poq = ProductOrderQuantity(pid=Product.get(id=product_id), quantity=quantity)
     poq.save()
     Order(product=poq).save()
+
+# TODO
+# def get_order(id: int)-> dict:
+#     order: Order = Order.get(id = id)
+#     return {
+#         "id": order.get_id,
+#         "total_price": order.product.price * order.product.quantity,
+        
+
+#     }
