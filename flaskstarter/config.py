@@ -16,7 +16,7 @@ class DefaultConfig(BaseConfig):
     DEBUG = True
 
     # SQLITE for production
-    DATABASE_URI = "sqlite:///db.sqlite"
+    DATABASE_URI = "badatase.db"
 
     # Flask-cache
     CACHE_TYPE = "simple"

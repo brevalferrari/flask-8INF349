@@ -1,0 +1,51 @@
+@startuml model
+
+entity Product {
+  name : VARCHAR(255)
+  in_stock : INTEGER
+  description : TEXT?
+  price : DECIMAL(5, 2) {>0}
+  weight : INTEGER? {>0}
+  image : VARCHAR(255)
+}
+
+entity ShippingInformation {
+  country : VARCHAR(255)
+  address : VARCHAR(255)
+  postal_code : VARCHAR(255)
+  city : VARCHAR(255)
+  province : VARCHAR(2)
+}
+
+entity ProductOrderQuantity {
+  quantity : INTEGER {>0}
+}
+
+entity CreditCardDetails {
+  name : VARCHAR(255)
+  number : DECIMAL(16, 0)
+  expiration_year : DECIMAL(4, 0)
+  cvv : DECIMAL(3, 0)
+  expiration_month : DECIMAL(2, 0) {0 < x < 13}
+}
+
+entity Transaction {
+  success : INTEGER
+  amount_charged : INTEGER
+}
+
+entity Order {
+  email : VARCHAR(255)?
+  paid : INTEGER
+}
+
+' Foreign keys (-->), backrefs (<..)
+ProductOrderQuantity --> Product: pid
+ProductOrderQuantity <.. Product: order_quantities
+Order --> ProductOrderQuantity: product
+Order --> CreditCardDetails: credit_card?
+Order --> ShippingInformation: shipping_information?
+Order <.. ShippingInformation: orders_shipped_there
+Order --> Transaction: transaction?
+
+@enduml

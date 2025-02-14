@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy.orm.mapper import configure_mappers
+from peewee import Model
+from os import remove as rm
 
 from flaskstarter import create_app
 from flaskstarter.extensions import db
-from flaskstarter.user import Users, ADMIN, USER, ACTIVE
-from flaskstarter.tasks import MyTaskModel
+from flaskstarter.config import DefaultConfig
+from flaskstarter.model import *
 
 application = create_app()
 
 
 @application.cli.command("initdb")
-def initdb():
+def initdb(config=DefaultConfig()):
     """Init/reset database."""
-
-    db.drop_all()
-    configure_mappers()
-    db.create_all()
+    try:
+        rm(config.DATABASE_URI)
+    except FileNotFoundError:
+        pass
+    # db.connect()
+    db.create_tables(Model.__subclasses__())
 
     # préparation de la base
