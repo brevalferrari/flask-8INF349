@@ -79,3 +79,11 @@ class Order(Model):
     paid = BooleanField(default=False)
     class Meta:
         database = db
+
+def add_test_product(name: str, price: float, weight: int, image: str):
+    Product(name=name, price=price, weight=weight, image=image).save()
+
+def add_order(product_id: int, quantity: int):
+    poq = ProductOrderQuantity(pid=Product.get(id=product_id), quantity=quantity)
+    poq.save()
+    Order(product=poq).save()
