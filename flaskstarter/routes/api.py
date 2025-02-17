@@ -2,7 +2,8 @@
 
 from flask import Blueprint, request, Response
 import json_schemas
-from jsonschema import validate, ValidationError
+
+from flaskstarter.utils import Json
 
 
 def response_with_headers(body, status=200, **headers) -> Response:
@@ -62,8 +63,16 @@ def new_order() -> Response:
     commande est créée, le code HTTP de retour doit être 302 et inclure le lien vers
     la commande nouvellement créée.
     """
-    try:
-        validate(request.get_json(), json_schemas.new_order)
+    if not Json(request.get_json()).is_like(json_schemas.new_order):
+        return {
+            "errors": {
+                "product": {
+                    "code": "missing-fields",
+                    "name": "La création d'une commande nécessite un produit",
+                }
+            }
+        }, 422
+    else:
         if out_of_inventory := False:  # TODO
             return {
                 "errors": {
@@ -78,8 +87,6 @@ def new_order() -> Response:
             status=302,
             Location="/order/<int:order_id>",
         )
-    except ValidationError as e:
-        return {"errors": {"product": {"code": "missing-fields", "name": e}}}, 422
 
 
 @api.get("/order/<int:order_id>")
@@ -114,8 +121,16 @@ def add_credit_card(order_id: int, json: dict) -> Response:
     Returns:
         Response: Flask HTTP Response with json data.
     """
-    try:
-        validate(json, json_schemas.put_order_credit_card)
+    if not Json(json).is_like(json_schemas.put_order_credit_card):
+        return {
+            "errors": {
+                "order": {
+                    "code": "missing-fields",
+                    "name": "Il manque un ou plusieurs champs qui sont obligatoires",
+                }
+            }
+        }, 422
+    else:
         if (client_information := True) is None:  # TODO
             return {
                 "errors": {
@@ -171,15 +186,6 @@ def add_credit_card(order_id: int, json: dict) -> Response:
                 "id": order_id,
             }
         }
-    except ValidationError:
-        return {
-            "errors": {
-                "order": {
-                    "code": "missing-fields",
-                    "name": "Il manque un ou plusieurs champs qui sont obligatoires",
-                }
-            }
-        }, 422
 
 
 def add_shipping_information(order_id: int, json: dict) -> Response:
@@ -192,8 +198,16 @@ def add_shipping_information(order_id: int, json: dict) -> Response:
     Returns:
         Response: Flask HTTP Response with json data.
     """
-    try:
-        validate(json, json_schemas.put_order_shipping_info)
+    if not Json(json).is_like(json_schemas.put_order_shipping_info):
+        return {
+            "errors": {
+                "order": {
+                    "code": "missing-fields",
+                    "name": "Il manque un ou plusieurs champs qui sont obligatoires",
+                }
+            }
+        }, 422
+    else:
         return {
             "order": {
                 "shipping_information": {
@@ -214,15 +228,6 @@ def add_shipping_information(order_id: int, json: dict) -> Response:
                 "id": order_id,
             }
         }
-    except ValidationError:
-        return {
-            "errors": {
-                "order": {
-                    "code": "missing-fields",
-                    "name": "Il manque un ou plusieurs champs qui sont obligatoires",
-                }
-            }
-        }, 422
 
 
 @api.put("/order/<int:order_id>")
