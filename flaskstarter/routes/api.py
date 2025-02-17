@@ -63,12 +63,22 @@ def new_order() -> Response:
     commande est créée, le code HTTP de retour doit être 302 et inclure le lien vers
     la commande nouvellement créée.
     """
-    if not Json(request.get_json()).is_like(json_schemas.new_order):
+    json = request.get_json()
+    if not Json(json).is_like(json_schemas.new_order):
         return {
             "errors": {
                 "product": {
                     "code": "missing-fields",
                     "name": "La création d'une commande nécessite un produit",
+                }
+            }
+        }, 422
+    elif json["product"]["quantity"] < 1:
+        return {
+            "errors": {
+                "product": {
+                    "code": "missing-fields",
+                    "name": "La quantité du produit ne peut pas être inférieure à 1",
                 }
             }
         }, 422
