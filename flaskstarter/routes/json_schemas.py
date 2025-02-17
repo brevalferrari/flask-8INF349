@@ -1,35 +1,27 @@
 """
 JSON schemas to validate sent form data.
+It's possible to say that some fields could have multiple types (like nullable types) by using Type1 | Type2.
 """
 
-new_order = {
-    "type": "object",
-    "properties": {"id": {"type": "number"}, "quantity": {"type": "number"}},
-}
+new_order = {"product": {"id": int, "quantity": int}}
 
 put_order_shipping_info = {
-    "type": "object",
-    "properties": {
-        "order": {
-            "email": {"type": "string"},
-            "shipping_information": {
-                "country": {"type": "string"},
-                "address": {"type": "string"},
-                "postal_code": {"type": "string"},
-            },
-        }
-    },
+    "order": {
+        "email": str,
+        "shipping_information": {
+            "country": str,
+            "address": str,
+            "postal_code": str,
+        },
+    }
 }
 
 put_order_credit_card = {
-    "type": "object",
-    "properties": {
-        "credit_card": {
-            "name": {"type": "string"},
-            "number": {"type": "string"},
-            "expiration_year": {"type": "number"},
-            "cvv": {"type": "string"},
-            "expiration_month": {"type": "number"},
-        }
-    },
+    "credit_card": {
+        "name": str,
+        "number": str,
+        "expiration_year": int,
+        "cvv": str,
+        "expiration_month": int,
+    }
 }
