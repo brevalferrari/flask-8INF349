@@ -12,6 +12,8 @@ put_order_shipping_info = {
             "country": str,
             "address": str,
             "postal_code": str,
+            "city": str,
+            "province": str,
         },
     }
 }
