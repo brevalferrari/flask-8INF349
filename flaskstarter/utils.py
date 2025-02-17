@@ -15,7 +15,11 @@ class Json:
         """
         for k, v in schema.items():
             if (not k in self._inner) or (
-                isinstance(v, dict) and not Json(self._inner[k]).is_like(v)
-            )(not isinstance(self._inner[k], v)):
+                (
+                    (is_dict := isinstance(v, dict))
+                    and not Json(self._inner[k]).is_like(v)
+                )
+                or (not is_dict and not isinstance(self._inner[k], v))
+            ):
                 return False
         return True
