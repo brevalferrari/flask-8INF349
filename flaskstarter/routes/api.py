@@ -1,7 +1,6 @@
 # TODO: this is only a static api
 
 from flask import Blueprint, request, Response
-
 import json_schemas
 from utils import response_with_headers
 from jsonschema import validate, ValidationError
@@ -65,3 +64,133 @@ def new_order() -> Response:
         )
     except ValidationError as e:
         return {"errors": {"product": {"code": "missing-fields", "name": e}}}, 422
+
+
+@api.get("/order/<int:order_id>")
+def get_order(order_id: int) -> Response:
+    """
+    Une fois le processus d'achat initialisé, on peut récupérer la commande complète
+    à tout moment avec cette requête GET.
+    """
+    return {
+        "order": {
+            "id": order_id,
+            "total_price": 9148,
+            "total_price_tax": 10520.20,
+            "email": None,
+            "credit_card": {},
+            "shipping_information": {},
+            "paid": None,
+            "transaction": {},
+            "product": {"id": 123, "quantity": 1},
+            "shipping_price": 1000,
+        }
+    }
+
+
+@api.put("/order/<int:order_id>")
+def put_order(order_id: int) -> Response:
+    """
+    Par défaut, une commande ne contient aucune information sur le client. On doit
+    fournir le courriel et l'adresse d'expédition du client.
+    """
+    json: dict = request.get_json()
+    if json.keys[0] is "credit_card":
+        try:
+            validate(json, json_schemas.put_order_credit_card)
+            if (client_information := True) is None:  # TODO
+                return {
+                    "errors": {
+                        "order": {
+                            "code": "missing-fields",
+                            "name": "Les informations du client sont nécessaire avant d'appliquer une carte de crédit",
+                        }
+                    }
+                }, 422
+            if already_paid := False:  # TODO
+                return {
+                    "errors": {
+                        "order": {
+                            "code": "already-paid",
+                            "name": "La commande a déjà été payée.",
+                        }
+                    }
+                }, 422
+            if not (card_accepted := True):  # TODO
+                return {
+                    "credit_card": {
+                        "code": "card-declined",
+                        "name": "La carte de crédit a été déclinée.",
+                    }
+                }
+            return {
+                "order": {
+                    "shipping_information": {
+                        "country": "Canada",
+                        "address": "201, rue Président-Kennedy",
+                        "postal_code": "G7X 3Y7",
+                        "city": "Chicoutimi",
+                        "province": "QC",
+                    },
+                    "email": "jgnault@uqac.ca",
+                    "total_price": 9148,
+                    "total_price_tax": 10520.20,
+                    "paid": True,
+                    "product": {"id": 123, "quantity": 1},
+                    "credit_card": {
+                        "name": "John Doe",
+                        "first_digits": "4242",
+                        "last_digits": "4242",
+                        "expiration_year": 2024,
+                        "expiration_month": 9,
+                    },
+                    "transaction": {
+                        "id": "wgEQ4zAUdYqpr21rt8A10dDrKbfcLmqi",
+                        "success": True,
+                        "amount_charged": 10148,
+                    },
+                    "shipping_price": 1000,
+                    "id": order_id,
+                }
+            }
+        except ValidationError:
+            return {
+                "errors": {
+                    "order": {
+                        "code": "missing-fields",
+                        "name": "Il manque un ou plusieurs champs qui sont obligatoires",
+                    }
+                }
+            }, 422
+    else:
+        try:
+            validate(json, json_schemas.put_order_shipping_info)
+            return {
+                "order": {
+                    "shipping_information": {
+                        "country": "Canada",
+                        "address": "201, rue Président-Kennedy",
+                        "postal_code": "G7X 3Y7",
+                        "city": "Chicoutimi",
+                        "province": "QC",
+                    },
+                    "credit_card": {},
+                    "email": "jgnault@uqac.ca",
+                    "total_price": 9148,
+                    "total_price_tax": 10520.20,
+                    "transaction": {},
+                    "paid": False,
+                    "product": {"id": 123, "quantity": 1},
+                    "shipping_price": 1000,
+                    "id": order_id,
+                }
+            }
+        except ValidationError:
+            return {
+                "errors": {
+                    "order": {
+                        "code": "missing-fields",
+                        "name": "Il manque un ou plusieurs champs qui sont obligatoires",
+                    }
+                }
+            }, 422
