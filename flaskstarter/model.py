@@ -102,12 +102,19 @@ def add_order(product_id: int, quantity: int):
     poq.save()
     Order(product=poq).save()
 
-# TODO
-# def get_order(id: int)-> dict:
-#     order: Order = Order.get(id = id)
-#     return {
-#         "id": order.get_id,
-#         "total_price": order.product.price * order.product.quantity,
-        
 
-#     }
+#Fonction get_order()
+def get_order(order_id: int) -> dict:
+    order = Order.get_or_none(Order.id == order_id)
+    if order is None:
+        return {"error": "Commande introuvable"}
+    
+    total_price = sum(
+        poq.product.price * poq.quantity for poq in ProductOrderQuantity.select().where(ProductOrderQuantity.order == order)
+    )
+    
+    return {
+        "id": order.id,
+        "total_price": total_price,
+        "paid": order.paid
+    }
