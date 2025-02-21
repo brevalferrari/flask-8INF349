@@ -1,6 +1,6 @@
 # TODO: this is only a static api
 
-from flask import Blueprint, request, Response
+from flask import Flask, request, Response
 import json_schemas
 
 from flaskstarter.utils import Json
@@ -22,7 +22,7 @@ def response_with_headers(body, status=200, **headers) -> Response:
     return response
 
 
-api = Blueprint("api", __name__)
+api = Flask(__name__)
 
 
 @api.get("/")
