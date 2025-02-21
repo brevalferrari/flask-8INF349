@@ -1,7 +1,7 @@
 # TODO: this is only a static api
 
 from flask import Flask, request, Response
-import json_schemas
+import flaskstarter.routes.json_schemas
 
 from flaskstarter.utils import Json
 
