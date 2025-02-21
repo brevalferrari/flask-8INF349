@@ -165,3 +165,15 @@ def get_order(order_id: int) -> dict:
             order.product.pid.weight * order.product.quantity
         ),
     }
+
+
+def put_order_shipping_information(
+    email: str, country: str, address: str, postal_code: str, city: str, province: str
+) -> dict:
+    pass  # TODO
+
+
+def put_order_credit_card(
+    name: str, number: int, expiration_year: int, cvv: int, expiration_month: int
+) -> dict:
+    pass  # TODO
