@@ -101,7 +101,7 @@ def serialize_product(product: Product) -> dict:
 
 
 def get_products() -> list[dict]:
-    return map(serialize_product, Product.select())
+    return [p for p in map(serialize_product, Product.select())]
 
 
 def _add_test_product(name: str, price: float, weight: int, image: str):
@@ -168,12 +168,44 @@ def get_order(order_id: int) -> dict:
 
 
 def put_order_shipping_information(
-    email: str, country: str, address: str, postal_code: str, city: str, province: str
+    order_id: int, email: str, country: str, address: str, postal_code: str, city: str, province: str
 ) -> dict:
-    pass  # TODO
+    order: Order | None = Order.get_or_none(order_id)
+    if order is None:
+        raise OrderNotFound()
+
+    si = order.shipping_information
+    if si is None: # no shipping information yet, create it
+        si = ShippingInformation(country = country, address = address, postal_code = postal_code, city = city, province = province)
+        si.save()
+        order.shipping_information = si
+        order.save()
+    else: # shipping information exists, update it
+        si.country = country
+        si.address = address
+        si.postal_code = postal_code
+        si.city = city
+        si.province = province
+        si.save()
 
 
 def put_order_credit_card(
-    name: str, number: int, expiration_year: int, cvv: int, expiration_month: int
+    order_id: int, name: str, number: int, expiration_year: int, cvv: int, expiration_month: int
 ) -> dict:
-    pass  # TODO
+    order: Order | None = Order.get_or_none(order_id)
+    if order is None:
+        raise OrderNotFound()
+
+    credit_card: None | CreditCardDetails = order.credit_card
+    if credit_card is None: # card does not exist yet
+        credit_card = CreditCardDetails(name = name, number = number, expiration_year = expiration_year, cvv = cvv, expiration_month = expiration_month)
+        credit_card.save()
+        order.credit_card = credit_card
+        order.save()
+    else: # card exists, update it
+        credit_card.name = name
+        credit_card.number = number
+        credit_card.expiration_year = expiration_year
+        credit_card.cvv = cvv
+        credit_card.expiration_month = expiration_month
+        credit_card.save()
