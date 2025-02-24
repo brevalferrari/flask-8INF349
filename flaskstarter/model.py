@@ -128,7 +128,7 @@ def get_order(order_id: int) -> dict:
     transaction: Transaction | None = order.transaction
 
     return {
-        "id": order.id,
+        "id": order_id,
         "total_price": total_price,
         "total_price_tax": (
             None
