@@ -188,6 +188,8 @@ def put_order_shipping_information(
         si.province = province
         si.save()
 
+    return get_order(order_id)
+
 
 def put_order_credit_card(
     order_id: int, name: str, number: int, expiration_year: int, cvv: int, expiration_month: int
@@ -209,3 +211,5 @@ def put_order_credit_card(
         credit_card.cvv = cvv
         credit_card.expiration_month = expiration_month
         credit_card.save()
+
+    return get_order(order_id)
