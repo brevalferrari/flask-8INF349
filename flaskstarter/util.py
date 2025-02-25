@@ -1,7 +1,8 @@
 class UnknownProvince(Exception):
     pass
 
-def calculate_tax(province: str)-> float:
+
+def calculate_tax(province: str) -> float:
     """Calcule les taxes en fonction de la province.
 
     Args:
@@ -27,7 +28,8 @@ def calculate_tax(province: str)-> float:
         case _:
             raise UnknownProvince()
 
-def calculate_shipping_price(grams: int)-> float:
+
+def calculate_shipping_price(grams: int) -> float:
     """Calcule le prix total pour expédier la commande.
 
     Args:

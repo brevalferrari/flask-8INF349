@@ -1,8 +1,14 @@
 from flaskstarter.model import put_order_shipping_information
+
 # TODO: this is only a static api
 
 from flask import Flask, request, Response
-from flaskstarter.model import add_order, get_products, get_order as _get_order, put_order_credit_card
+from flaskstarter.model import (
+    add_order,
+    get_products,
+    get_order as _get_order,
+    put_order_credit_card,
+)
 import flaskstarter.routes.json_schemas as json_schemas
 
 from flaskstarter.utils import Json
@@ -136,7 +142,14 @@ def add_credit_card(order_id: int, json: dict) -> Response:
                     "name": "La carte de crédit a été déclinée.",
                 }
             }
-        return put_order_credit_card(order_id, cc["name"], int(''.join([n for n in cc["number"] if n != " "])), int(cc["expiration_year"]), int(cc["cvv"]), int(cc["expiration_month"]))
+        return put_order_credit_card(
+            order_id,
+            cc["name"],
+            int("".join([n for n in cc["number"] if n != " "])),
+            int(cc["expiration_year"]),
+            int(cc["cvv"]),
+            int(cc["expiration_month"]),
+        )
 
 
 def add_shipping_information(order_id: int, json: dict) -> Response:
@@ -161,7 +174,15 @@ def add_shipping_information(order_id: int, json: dict) -> Response:
     else:
         o = json["order"]
         s = o["shipping_information"]
-        return put_order_shipping_information(order_id, o["email"], s["country"], s["address"], s["postal_code"], s["city"], s["province"])
+        return put_order_shipping_information(
+            order_id,
+            o["email"],
+            s["country"],
+            s["address"],
+            s["postal_code"],
+            s["city"],
+            s["province"],
+        )
 
 
 @api.put("/order/<int:order_id>")
@@ -171,7 +192,7 @@ def put_order(order_id: int) -> Response:
     fournir le courriel et l'adresse d'expédition du client.
     """
     json: dict = request.get_json()
-    if [k for k in json.keys()][0] == "credit_card":
+    if list(json.keys())[0] == "credit_card":
         return add_credit_card(order_id, json)
     else:
         return add_shipping_information(order_id, json)
