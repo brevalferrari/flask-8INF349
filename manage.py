@@ -22,7 +22,3 @@ def initdb(config=DefaultConfig()):
     db.create_tables(Model.__subclasses__())
 
     # préparation de la base
-
-@application.cli.command("run")
-def run():
-    application.run()
