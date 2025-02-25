@@ -12,7 +12,7 @@ from peewee import (
 )
 
 from .extensions import db
-from .util import calculate_tax, calculate_shipping_price
+from .utils.taxes import calculate_tax, calculate_shipping_price
 
 
 class Product(Model):

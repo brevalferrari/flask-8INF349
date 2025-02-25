@@ -11,7 +11,7 @@ from flaskstarter.model import (
 )
 import flaskstarter.routes.json_schemas as json_schemas
 
-from flaskstarter.utils import Json
+from flaskstarter.utils.json import Json
 
 
 def response_with_headers(body, status=200, **headers) -> Response:
