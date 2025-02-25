@@ -1,7 +1,8 @@
 # TODO: this is only a static api
 
 from flask import Flask, request, Response
-import flaskstarter.routes.json_schemas
+from flaskstarter.model import add_order, get_products, get_order as _get_order
+import flaskstarter.routes.json_schemas as json_schemas
 
 from flaskstarter.utils import Json
 
@@ -32,28 +33,7 @@ def list_products() -> Response:
     disponibles pour passer une commande, incluant ceux qui ne sont pas en
     inventaire.
     """
-    return {
-        "products": [
-            {
-                "name": "Brown eggs",
-                "id": 1,
-                "in_stock": True,
-                "description": "Raw organic brown eggs in a basket",
-                "price": 28.1,
-                "weight": 400,
-                "image": "0.jpg",
-            },
-            {
-                "description": "Sweet fresh stawberry on the wooden table",
-                "image": "1.jpg",
-                "in_stock": True,
-                "weight": 299,
-                "id": 2,
-                "name": "Sweet fresh stawberry",
-                "price": 29.45,
-            },
-        ]
-    }
+    return get_products()
 
 
 @api.post("/order")
@@ -83,6 +63,7 @@ def new_order() -> Response:
             }
         }, 422
     else:
+        order_id = add_order(json["product"]["id"], json["product"]["quantity"])
         if out_of_inventory := False:  # TODO
             return {
                 "errors": {
@@ -93,9 +74,9 @@ def new_order() -> Response:
                 }
             }, 422
         return response_with_headers(
-            {"product": {"id": 123, "quantity": 2}},
+            None,
             status=302,
-            Location="/order/<int:order_id>",
+            Location=f"/order/{order_id}",
         )
 
 
@@ -105,20 +86,7 @@ def get_order(order_id: int) -> Response:
     Une fois le processus d'achat initialisé, on peut récupérer la commande complète
     à tout moment avec cette requête GET.
     """
-    return {
-        "order": {
-            "id": order_id,
-            "total_price": 9148,
-            "total_price_tax": 10520.20,
-            "email": None,
-            "credit_card": {},
-            "shipping_information": {},
-            "paid": None,
-            "transaction": {},
-            "product": {"id": 123, "quantity": 1},
-            "shipping_price": 1000,
-        }
-    }
+    return {"order": _get_order(order_id)}
 
 
 def add_credit_card(order_id: int, json: dict) -> Response:

@@ -108,10 +108,12 @@ def _add_test_product(name: str, price: float, weight: int, image: str):
     Product(name=name, price=price, weight=weight, image=image).save()
 
 
-def add_order(product_id: int, quantity: int):
+def add_order(product_id: int, quantity: int) -> int:
     poq = ProductOrderQuantity(pid=Product.get(id=product_id), quantity=quantity)
     poq.save()
-    Order(product=poq).save()
+    order = Order(product=poq)
+    order.save()
+    return order.get_id()
 
 
 class OrderNotFound(Exception):
@@ -125,11 +127,12 @@ def get_order(order_id: int) -> dict:
 
     total_price = order.product.pid.price * order.product.quantity
     credit_card: CreditCardDetails | None = order.credit_card
+    shipping_information: ShippingInformation | None = order.shipping_information
     transaction: Transaction | None = order.transaction
 
     return {
         "id": order_id,
-        "total_price": total_price,
+        "total_price": float(total_price),
         "total_price_tax": (
             None
             if order.shipping_information is None
@@ -137,7 +140,7 @@ def get_order(order_id: int) -> dict:
         ),
         "email": order.email,
         "credit_card": (
-            None
+            {}
             if credit_card is None
             else {
                 "name": credit_card.name,
@@ -147,8 +150,19 @@ def get_order(order_id: int) -> dict:
                 "expiration_month": credit_card.expiration_month,
             }
         ),
+        "shipping_information": (
+            {}
+            if shipping_information is None
+            else {
+                "country" : shipping_information.country,
+                 "address" : shipping_information.address,
+                 "postal_code" : shipping_information.postal_code,
+                 "city" : shipping_information.city,
+                 "province" : shipping_information.province
+            }
+        ),
         "transaction": (
-            None
+            {}
             if transaction is None
             else {
                 "id": transaction.id,
