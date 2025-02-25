@@ -14,7 +14,7 @@ class Json:
             bool: Wether this is a valid JSON according to the provided schema or not.
         """
         for k, v in schema.items():
-            if (not k in self._inner) or (
+            if (k not in self._inner) or (
                 (
                     (is_dict := isinstance(v, dict))
                     and not Json(self._inner[k]).is_like(v)

@@ -131,97 +131,123 @@ def get_order(order_id: int) -> dict:
     transaction: Transaction | None = order.transaction
 
     return {
-        "order":
-            {
-                "id": order_id,
-                "total_price": total_price,
-                "total_price_tax": (
-                    None
-                    if order.shipping_information is None
-                    else calculate_tax(order.shipping_information.province) * total_price + total_price
-                ),
-                "email": order.email,
-                "credit_card": (
-                    {}
-                    if credit_card is None
-                    else {
-                        "name": credit_card.name,
-                        "first_digits": str(credit_card.number)[:4],
-                        "last_digits": str(credit_card.number)[-4:],
-                        "expiration_year": int(credit_card.expiration_year),
-                        "expiration_month": int(credit_card.expiration_month),
-                    }
-                ),
-                "shipping_information": (
-                    {}
-                    if shipping_information is None
-                    else {
-                        "country" : shipping_information.country,
-                         "address" : shipping_information.address,
-                         "postal_code" : shipping_information.postal_code,
-                         "city" : shipping_information.city,
-                         "province" : shipping_information.province
-                    }
-                ),
-                "transaction": (
-                    {}
-                    if transaction is None
-                    else {
-                        "id": transaction.id,
-                        "success": transaction.success,
-                        "amount_charged": transaction.amount_charged,
-                    }
-                ),
-                "paid": order.paid,
-                "product": {
-                    "id": order.product.pid.get_id(),
-                    "quantity": order.product.quantity,
-                },
-                "shipping_price": calculate_shipping_price(
-                    order.product.pid.weight * order.product.quantity
-                ),
-            }
+        "order": {
+            "id": order_id,
+            "total_price": total_price,
+            "total_price_tax": (
+                None
+                if order.shipping_information is None
+                else calculate_tax(order.shipping_information.province) * total_price
+                + total_price
+            ),
+            "email": order.email,
+            "credit_card": (
+                {}
+                if credit_card is None
+                else {
+                    "name": credit_card.name,
+                    "first_digits": str(credit_card.number)[:4],
+                    "last_digits": str(credit_card.number)[-4:],
+                    "expiration_year": int(credit_card.expiration_year),
+                    "expiration_month": int(credit_card.expiration_month),
+                }
+            ),
+            "shipping_information": (
+                {}
+                if shipping_information is None
+                else {
+                    "country": shipping_information.country,
+                    "address": shipping_information.address,
+                    "postal_code": shipping_information.postal_code,
+                    "city": shipping_information.city,
+                    "province": shipping_information.province,
+                }
+            ),
+            "transaction": (
+                {}
+                if transaction is None
+                else {
+                    "id": transaction.id,
+                    "success": transaction.success,
+                    "amount_charged": transaction.amount_charged,
+                }
+            ),
+            "paid": order.paid,
+            "product": {
+                "id": order.product.pid.get_id(),
+                "quantity": order.product.quantity,
+            },
+            "shipping_price": calculate_shipping_price(
+                order.product.pid.weight * order.product.quantity
+            ),
+        }
     }
 
 
 def put_order_shipping_information(
-    order_id: int, email: str, country: str, address: str, postal_code: str, city: str, province: str
+    order_id: int,
+    email: str,
+    country: str,
+    address: str,
+    postal_code: str,
+    city: str,
+    province: str,
 ) -> dict:
     order: Order | None = Order.get_or_none(order_id)
     if order is None:
         raise OrderNotFound()
 
     si = order.shipping_information
-    if si is None: # no shipping information yet, create it
-        si = ShippingInformation(country = country, address = address, postal_code = postal_code, city = city, province = province)
+    if si is None:  # no shipping information yet, create it
+        si = ShippingInformation(
+            country=country,
+            address=address,
+            postal_code=postal_code,
+            city=city,
+            province=province,
+        )
         si.save()
         order.shipping_information = si
+        order.email = email
         order.save()
-    else: # shipping information exists, update it
+    else:  # shipping information exists, update it
         si.country = country
         si.address = address
         si.postal_code = postal_code
         si.city = city
         si.province = province
         si.save()
+        order.email = email
+        order.save()
 
     return get_order(order_id)
 
 
 def put_order_credit_card(
-    order_id: int, name: str, number: int, expiration_year: int, cvv: int, expiration_month: int
+    order_id: int,
+    name: str,
+    number: int,
+    expiration_year: int,
+    cvv: int,
+    expiration_month: int,
 ) -> dict:
     order: Order | None = Order.get_or_none(order_id)
     if order is None:
         raise OrderNotFound()
 
     credit_card: None | CreditCardDetails = order.credit_card
-    if credit_card is None: # card does not exist yet
-        credit_card = CreditCardDetails(name = name, number = number, expiration_year = expiration_year, cvv = cvv, expiration_month = expiration_month)
+    if credit_card is None:  # card does not exist yet
+        credit_card = CreditCardDetails(
+            name=name,
+            number=number,
+            expiration_year=expiration_year,
+            cvv=cvv,
+            expiration_month=expiration_month,
+        )
         credit_card.save()
         order.credit_card = credit_card
         order.save()
-    else: # card exists, update it
+    else:  # card exists, update it
         credit_card.name = name
         credit_card.number = number
         credit_card.expiration_year = expiration_year
