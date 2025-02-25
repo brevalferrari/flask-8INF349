@@ -125,59 +125,62 @@ def get_order(order_id: int) -> dict:
     if order is None:
         raise OrderNotFound()
 
-    total_price = order.product.pid.price * order.product.quantity
+    total_price = float(order.product.pid.price * order.product.quantity)
     credit_card: CreditCardDetails | None = order.credit_card
     shipping_information: ShippingInformation | None = order.shipping_information
     transaction: Transaction | None = order.transaction
 
     return {
-        "id": order_id,
-        "total_price": float(total_price),
-        "total_price_tax": (
-            None
-            if order.shipping_information is None
-            else calculate_tax(order.shipping_information.province) * total_price
-        ),
-        "email": order.email,
-        "credit_card": (
-            {}
-            if credit_card is None
-            else {
-                "name": credit_card.name,
-                "first_digits": str(credit_card.number)[:4],
-                "last_digits": str(credit_card.number)[-4:],
-                "expiration_year": credit_card.expiration_year,
-                "expiration_month": credit_card.expiration_month,
+        "order":
+            {
+                "id": order_id,
+                "total_price": total_price,
+                "total_price_tax": (
+                    None
+                    if order.shipping_information is None
+                    else calculate_tax(order.shipping_information.province) * total_price + total_price
+                ),
+                "email": order.email,
+                "credit_card": (
+                    {}
+                    if credit_card is None
+                    else {
+                        "name": credit_card.name,
+                        "first_digits": str(credit_card.number)[:4],
+                        "last_digits": str(credit_card.number)[-4:],
+                        "expiration_year": int(credit_card.expiration_year),
+                        "expiration_month": int(credit_card.expiration_month),
+                    }
+                ),
+                "shipping_information": (
+                    {}
+                    if shipping_information is None
+                    else {
+                        "country" : shipping_information.country,
+                         "address" : shipping_information.address,
+                         "postal_code" : shipping_information.postal_code,
+                         "city" : shipping_information.city,
+                         "province" : shipping_information.province
+                    }
+                ),
+                "transaction": (
+                    {}
+                    if transaction is None
+                    else {
+                        "id": transaction.id,
+                        "success": transaction.success,
+                        "amount_charged": transaction.amount_charged,
+                    }
+                ),
+                "paid": order.paid,
+                "product": {
+                    "id": order.product.pid.get_id(),
+                    "quantity": order.product.quantity,
+                },
+                "shipping_price": calculate_shipping_price(
+                    order.product.pid.weight * order.product.quantity
+                ),
             }
-        ),
-        "shipping_information": (
-            {}
-            if shipping_information is None
-            else {
-                "country" : shipping_information.country,
-                 "address" : shipping_information.address,
-                 "postal_code" : shipping_information.postal_code,
-                 "city" : shipping_information.city,
-                 "province" : shipping_information.province
-            }
-        ),
-        "transaction": (
-            {}
-            if transaction is None
-            else {
-                "id": transaction.id,
-                "success": transaction.success,
-                "amount_charged": transaction.amount_charged,
-            }
-        ),
-        "paid": order.paid,
-        "product": {
-            "id": order.product.pid.get_id(),
-            "quantity": order.product.quantity,
-        },
-        "shipping_price": calculate_shipping_price(
-            order.product.pid.weight * order.product.quantity
-        ),
     }
 
 

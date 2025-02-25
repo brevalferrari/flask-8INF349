@@ -1,7 +1,8 @@
+from flaskstarter.model import put_order_shipping_information
 # TODO: this is only a static api
 
 from flask import Flask, request, Response
-from flaskstarter.model import add_order, get_products, get_order as _get_order
+from flaskstarter.model import add_order, get_products, get_order as _get_order, put_order_credit_card
 import flaskstarter.routes.json_schemas as json_schemas
 
 from flaskstarter.utils import Json
@@ -86,7 +87,7 @@ def get_order(order_id: int) -> Response:
     Une fois le processus d'achat initialisé, on peut récupérer la commande complète
     à tout moment avec cette requête GET.
     """
-    return {"order": _get_order(order_id)}
+    return _get_order(order_id)
 
 
 def add_credit_card(order_id: int, json: dict) -> Response:
@@ -109,6 +110,7 @@ def add_credit_card(order_id: int, json: dict) -> Response:
             }
         }, 422
     else:
+        cc = json["credit_card"]
         if (client_information := True) is None:  # TODO
             return {
                 "errors": {
@@ -134,36 +136,7 @@ def add_credit_card(order_id: int, json: dict) -> Response:
                     "name": "La carte de crédit a été déclinée.",
                 }
             }
-        return {
-            "order": {
-                "shipping_information": {
-                    "country": "Canada",
-                    "address": "201, rue Président-Kennedy",
-                    "postal_code": "G7X 3Y7",
-                    "city": "Chicoutimi",
-                    "province": "QC",
-                },
-                "email": "jgnault@uqac.ca",
-                "total_price": 9148,
-                "total_price_tax": 10520.20,
-                "paid": True,
-                "product": {"id": 123, "quantity": 1},
-                "credit_card": {
-                    "name": "John Doe",
-                    "first_digits": "4242",
-                    "last_digits": "4242",
-                    "expiration_year": 2024,
-                    "expiration_month": 9,
-                },
-                "transaction": {
-                    "id": "wgEQ4zAUdYqpr21rt8A10dDrKbfcLmqi",
-                    "success": True,
-                    "amount_charged": 10148,
-                },
-                "shipping_price": 1000,
-                "id": order_id,
-            }
-        }
+        return put_order_credit_card(order_id, cc["name"], int(''.join([n for n in cc["number"] if n != " "])), int(cc["expiration_year"]), int(cc["cvv"]), int(cc["expiration_month"]))
 
 
 def add_shipping_information(order_id: int, json: dict) -> Response:
@@ -186,26 +159,9 @@ def add_shipping_information(order_id: int, json: dict) -> Response:
             }
         }, 422
     else:
-        return {
-            "order": {
-                "shipping_information": {
-                    "country": "Canada",
-                    "address": "201, rue Président-Kennedy",
-                    "postal_code": "G7X 3Y7",
-                    "city": "Chicoutimi",
-                    "province": "QC",
-                },
-                "credit_card": {},
-                "email": "jgnault@uqac.ca",
-                "total_price": 9148,
-                "total_price_tax": 10520.20,
-                "transaction": {},
-                "paid": False,
-                "product": {"id": 123, "quantity": 1},
-                "shipping_price": 1000,
-                "id": order_id,
-            }
-        }
+        o = json["order"]
+        s = o["shipping_information"]
+        return put_order_shipping_information(order_id, o["email"], s["country"], s["address"], s["postal_code"], s["city"], s["province"])
 
 
 @api.put("/order/<int:order_id>")
@@ -215,7 +171,7 @@ def put_order(order_id: int) -> Response:
     fournir le courriel et l'adresse d'expédition du client.
     """
     json: dict = request.get_json()
-    if json.keys[0] is "credit_card":
+    if [k for k in json.keys()][0] == "credit_card":
         return add_credit_card(order_id, json)
     else:
         return add_shipping_information(order_id, json)
