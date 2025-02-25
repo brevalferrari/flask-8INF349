@@ -104,9 +104,11 @@ def get_products() -> list[dict]:
     return [p for p in map(serialize_product, Product.select())]
 
 
-def _add_test_product(name: str, price: float, weight: int, image: str):
-    Product(name=name, price=price, weight=weight, image=image).save()
+def add_product(name: str, in_stock: bool, description: str | None, price: float, weight: int, image: str, id: int | None = None):
+    Product(id=id, name=name, in_stock=in_stock, description=description, price=price, weight=weight, image=image).save(force_insert=True)
 
+def drop_products():
+    Product.delete().execute()
 
 def add_order(product_id: int, quantity: int) -> int:
     poq = ProductOrderQuantity(pid=Product.get(id=product_id), quantity=quantity)
