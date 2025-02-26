@@ -14,11 +14,12 @@ application = create_app()
 @application.cli.command("initdb")
 def initdb(config=DefaultConfig()):
     """Init/reset database."""
+    db.close()
     try:
         rm(config.DATABASE_URI)
     except FileNotFoundError:
         pass
-    # db.connect()
+    db.connect()
     db.create_tables(Model.__subclasses__())
 
     # préparation de la base
