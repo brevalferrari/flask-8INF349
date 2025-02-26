@@ -11,6 +11,8 @@ from peewee import (
     BigIntegerField,
 )
 
+from flaskstarter.services.external.chargingapi import charge
+
 from .extensions import db
 from .utils.taxes import calculate_tax, calculate_shipping_price
 
@@ -66,9 +68,9 @@ class CreditCardDetails(Model):
 
 
 class Transaction(Model):
-    id = UUIDField(primary_key=True)
+    id = CharField(max_length=32, primary_key=True)
     success = BooleanField()
-    amount_charged = BigIntegerField()
+    amount_charged = DecimalField(decimal_places=2)
 
     class Meta:
         database = db
@@ -104,11 +106,29 @@ def get_products() -> list[dict]:
     return [p for p in map(serialize_product, Product.select())]
 
 
-def add_product(name: str, in_stock: bool, description: str | None, price: float, weight: int, image: str, id: int | None = None):
-    Product(id=id, name=name, in_stock=in_stock, description=description, price=price, weight=weight, image=image).save(force_insert=True)
+def add_product(
+    name: str,
+    in_stock: bool,
+    description: str | None,
+    price: float,
+    weight: int,
+    image: str,
+    id: int | None = None,
+):
+    Product(
+        id=id,
+        name=name,
+        in_stock=in_stock,
+        description=description,
+        price=price,
+        weight=weight,
+        image=image,
+    ).save(force_insert=True)
+
 
 def drop_products():
     Product.delete().execute()
+
 
 def add_order(product_id: int, quantity: int) -> int:
     poq = ProductOrderQuantity(pid=Product.get(id=product_id), quantity=quantity)
@@ -238,23 +258,47 @@ def put_order_credit_card(
         raise OrderNotFound()
 
     credit_card: None | CreditCardDetails = order.credit_card
-    if credit_card is None:  # card does not exist yet
-        credit_card = CreditCardDetails(
-            name=name,
-            number=number,
-            expiration_year=expiration_year,
-            cvv=cvv,
-            expiration_month=expiration_month,
+    with db.manual_commit() as _:
+        db.begin()
+        if credit_card is None:  # card does not exist yet
+            credit_card = CreditCardDetails(
+                name=name,
+                number=number,
+                expiration_year=expiration_year,
+                cvv=cvv,
+                expiration_month=expiration_month,
+            )
+            credit_card.save()
+            order.credit_card = credit_card
+            order.save()
+        else:  # card exists, update it
+            credit_card.name = name
+            credit_card.number = number
+            credit_card.expiration_year = expiration_year
+            credit_card.cvv = cvv
+            credit_card.expiration_month = expiration_month
+            credit_card.save()
+        db.commit()
+
+    order_dict = get_order(order_id)
+    transaction_dict = charge(
+        name,
+        number,
+        expiration_year,
+        cvv,
+        expiration_month,
+        order_dict["order"]["total_price_tax"] + order_dict["order"]["shipping_price"],
+    )["transaction"]
+    with db.manual_commit() as _:
+        db.begin()
+        transaction = Transaction(
+            id=transaction_dict["id"],
+            success=transaction_dict["success"],
+            amount_charged=transaction_dict["amount_charged"],
         )
-        credit_card.save()
-        order.credit_card = credit_card
+        transaction.save(force_insert=True)
+        order.transaction = transaction
         order.save()
-    else:  # card exists, update it
-        credit_card.name = name
-        credit_card.number = number
-        credit_card.expiration_year = expiration_year
-        credit_card.cvv = cvv
-        credit_card.expiration_month = expiration_month
-        credit_card.save()
+        db.commit()
 
     return get_order(order_id)
