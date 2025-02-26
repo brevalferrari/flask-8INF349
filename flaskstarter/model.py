@@ -7,8 +7,6 @@ from peewee import (
     Model,
     Check,
     ForeignKeyField,
-    UUIDField,
-    BigIntegerField,
 )
 
 from flaskstarter.services.external.chargingapi import charge
