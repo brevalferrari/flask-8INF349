@@ -1,7 +1,4 @@
 from flaskstarter.model import put_order_shipping_information
-
-# TODO: this is only a static api
-
 from flask import Flask, request, Response
 from flaskstarter.model import (
     add_order,
