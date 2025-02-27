@@ -1,13 +1,12 @@
-from flaskstarter.model import put_order_shipping_information
 from flask import Flask, request, Response
 from flaskstarter.model import (
     add_order,
     get_products,
     get_order as _get_order,
     put_order_credit_card,
+    put_order_shipping_information
 )
 import flaskstarter.routes.json_schemas as json_schemas
-
 from flaskstarter.utils.json import Json
 
 
