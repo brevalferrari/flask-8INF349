@@ -4,10 +4,15 @@ from flaskstarter.model import (
     get_products,
     get_order as _get_order,
     put_order_credit_card,
-    put_order_shipping_information
+    put_order_shipping_information,
+    FlatOrder,
+    FlatProductOrderQuantity,
+    get_product,
+    FlatCreditCardDetails,
+    FlatShippingInformation
 )
 import flaskstarter.routes.json_schemas as json_schemas
-from flaskstarter.utils.json import Json
+from flaskstarter.utils.json import Json, serialize_order
 
 
 def response_with_headers(body, status=200, **headers) -> Response:
@@ -66,8 +71,8 @@ def new_order() -> Response:
             }
         }, 422
     else:
-        order_id = add_order(json["product"]["id"], json["product"]["quantity"])
-        if out_of_inventory := False:  # TODO
+        order = add_order(FlatOrder(products=FlatProductOrderQuantity(product=get_product(json["product"]["id"]), quantity=json["product"]["quantity"])))
+        if not order.products.product.in_stock:
             return {
                 "errors": {
                     "product": {
@@ -79,7 +84,7 @@ def new_order() -> Response:
         return response_with_headers(
             None,
             status=302,
-            Location=f"/order/{order_id}",
+            Location=f"/order/{order.id}",
         )
 
 
@@ -112,8 +117,9 @@ def add_credit_card(order_id: int, json: dict) -> Response:
             }
         }, 422
     else:
+        order = get_order(order_id)
         cc = json["credit_card"]
-        if (client_information := True) is None:  # TODO
+        if order.shipping_information is None:
             return {
                 "errors": {
                     "order": {
@@ -122,7 +128,7 @@ def add_credit_card(order_id: int, json: dict) -> Response:
                     }
                 }
             }, 422
-        if already_paid := False:  # TODO
+        if order.transaction.paid:
             return {
                 "errors": {
                     "order": {
@@ -138,14 +144,10 @@ def add_credit_card(order_id: int, json: dict) -> Response:
                     "name": "La carte de crédit a été déclinée.",
                 }
             }
-        return put_order_credit_card(
+        return serialize_order(put_order_credit_card(
             order_id,
-            cc["name"],
-            int("".join([n for n in cc["number"] if n != " "])),
-            int(cc["expiration_year"]),
-            int(cc["cvv"]),
-            int(cc["expiration_month"]),
-        )
+            FlatCreditCardDetails(name=cc["name"], number=int("".join([n for n in cc["number"] if n != " "])), expiration_year=int(cc["expiration_year"]), cvv=int(cc["cvv"]), expiration_month=int(cc["expiration_month"]))
+        ))
 
 
 def add_shipping_information(order_id: int, json: dict) -> Response:
@@ -170,15 +172,11 @@ def add_shipping_information(order_id: int, json: dict) -> Response:
     else:
         o = json["order"]
         s = o["shipping_information"]
-        return put_order_shipping_information(
+        return serialize_order(put_order_shipping_information(
             order_id,
             o["email"],
-            s["country"],
-            s["address"],
-            s["postal_code"],
-            s["city"],
-            s["province"],
-        )
+            FlatShippingInformation(country=s["country"], address=s["address"], postal_code=s["postal_code"], city=s["city"], province=s["province"])
+        ))
 
 
 @api.put("/order/<int:order_id>")
