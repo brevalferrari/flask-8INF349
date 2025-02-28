@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from peewee import (
     CharField,
     BooleanField,
@@ -10,10 +11,18 @@ from peewee import (
 )
 
 from flaskstarter.services.external.chargingapi import charge
-
 from .extensions import db
-from .utils.taxes import calculate_tax, calculate_shipping_price
+from .utils.json import serialize_order
 
+@dataclass
+class FlatProduct:
+    id: int | None = None
+    name: str
+    in_stock: bool = True
+    description: str | None = None
+    price: float
+    weight: int | None = None
+    image: str
 
 class Product(Model):
     name = CharField()
@@ -27,7 +36,19 @@ class Product(Model):
 
     class Meta:
         database = db
+    
+    def flatten(self)-> FlatProduct:
+        """Convert this object to a flat dataclass, cutting every link with the database."""
+        return FlatProduct(id=self.get_id(), name=self.name, in_stock=self.in_stock, description=self.description, price=self.price, weight=self.weight, image=self.image)
 
+@dataclass
+class FlatShippingInformation:
+    id: int | None = None
+    country: str
+    address: str
+    postal_code: str
+    city: str
+    province: str
 
 class ShippingInformation(Model):
     country = CharField()
@@ -39,6 +60,16 @@ class ShippingInformation(Model):
     class Meta:
         database = db
 
+    def flatten(self)-> FlatShippingInformation:
+        """Convert this object to a flat dataclass, cutting every link with the database."""
+        return FlatShippingInformation(id=self.get_id(), country=self.country, address=self.address, postal_code=self.postal_code, city=self.city, province=self.province)
+
+@dataclass
+class FlatProductOrderQuantity:
+    id: int | None = None
+    # oid: FlatOrder
+    product: FlatProduct
+    quantity: int
 
 class ProductOrderQuantity(Model):
     # TODO: uncomment line below and move class definition to have multiple products per order (next version)
@@ -48,7 +79,20 @@ class ProductOrderQuantity(Model):
 
     class Meta:
         database = db
+    
+    def flatten(self)-> FlatProductOrderQuantity:
+        """Convert this object to a flat dataclass, cutting every link with the database."""
+        return FlatProductOrderQuantity(id=self.get_id(), product=self.pid.flatten(), quantity=self.quantity)
 
+
+@dataclass
+class FlatCreditCardDetails:
+    id: int | None = None
+    name: str
+    number: int
+    expiration_year: int
+    cvv: int
+    expiration_month: int
 
 class CreditCardDetails(Model):
     name = CharField()
@@ -64,6 +108,15 @@ class CreditCardDetails(Model):
     class Meta:
         database = db
 
+    def flatten(self)-> FlatCreditCardDetails:
+        """Convert this object to a flat dataclass, cutting every link with the database."""
+        return FlatCreditCardDetails(id=self.get_id(), name=self.name, number=self.number, expiration_year=self.expiration_year, cvv=self.cvv, expiration_month=self.expiration_month)
+
+@dataclass
+class FlatTransaction:
+    id: int | None = None
+    success: bool
+    amount_charged: float
 
 class Transaction(Model):
     id = CharField(max_length=32, primary_key=True)
@@ -72,7 +125,20 @@ class Transaction(Model):
 
     class Meta:
         database = db
+    
+    def flatten(self)-> FlatTransaction:
+        """Convert this object to a flat dataclass, cutting every link with the database."""
+        return FlatTransaction(id=self.id, success=self.success, amount_charged=self.amount_charged)
 
+@dataclass
+class FlatOrder:
+    id: int | None = None
+    products: FlatProductOrderQuantity
+    email: str | None = None
+    credit_card: FlatCreditCardDetails | None = None
+    shipping_information: FlatShippingInformation | None = None
+    transaction: FlatTransaction | None = None
+    paid: bool = False
 
 class Order(Model):
     product = ForeignKeyField(ProductOrderQuantity)
@@ -87,132 +153,50 @@ class Order(Model):
     class Meta:
         database = db
 
+    def flatten(self)-> FlatOrder:
+        """Convert this object to a flat dataclass, cutting every link with the database."""
+        return FlatOrder(id=self.get_id(), product=self.product, email=self.email, credit_card=self.credit_card.flatten(), shipping_information=self.shipping_information.flatten(), transaction=self.transaction.flatten(), paid=self.paid)
 
-def serialize_product(product: Product) -> dict:
-    return {
-        "name": product.name,
-        "id": product.get_id(),
-        "in_stock": bool(product.in_stock),
-        "description": product.description,
-        "price": product.price,
-        "weight": product.weight,
-        "image": product.image,
-    }
-
+def get_product(product_id: int)-> FlatProduct:
+    return Product.get_by_id(product_id).flatten()
 
 def get_products() -> list[dict]:
-    return [p for p in map(serialize_product, Product.select())]
+    return list(map(lambda p: p.flatten(), Product.select()))
 
 
-def add_product(
-    name: str,
-    in_stock: bool,
-    description: str | None,
-    price: float,
-    weight: int,
-    image: str,
-    id: int | None = None,
-):
-    Product(
-        id=id,
-        name=name,
-        in_stock=in_stock,
-        description=description,
-        price=price,
-        weight=weight,
-        image=image,
-    ).save(force_insert=True)
+def add_product(product: FlatProduct):
+    product.save(force_insert=True)
 
 
 def drop_products():
     Product.delete().execute()
 
 
-def add_order(product_id: int, quantity: int) -> int:
-    poq = ProductOrderQuantity(pid=Product.get(id=product_id), quantity=quantity)
+def add_order(order: FlatOrder) -> FlatOrder:
+    poq = ProductOrderQuantity(pid=Product.get(id=order.products.product.id), quantity=order.products.quantity)
     poq.save()
     order = Order(product=poq)
     order.save()
-    return order.get_id()
+    return order.flatten()
 
 
 class OrderNotFound(Exception):
     pass
 
 
-def get_order(order_id: int) -> dict:
+def get_order(order_id: int) -> FlatOrder:
     order: Order | None = Order.get_or_none(order_id)
     if order is None:
         raise OrderNotFound()
 
-    total_price = float(order.product.pid.price * order.product.quantity)
-    credit_card: CreditCardDetails | None = order.credit_card
-    shipping_information: ShippingInformation | None = order.shipping_information
-    transaction: Transaction | None = order.transaction
-
-    return {
-        "order": {
-            "id": order_id,
-            "total_price": total_price,
-            "total_price_tax": (
-                None
-                if order.shipping_information is None
-                else calculate_tax(order.shipping_information.province) * total_price
-                + total_price
-            ),
-            "email": order.email,
-            "credit_card": (
-                {}
-                if credit_card is None
-                else {
-                    "name": credit_card.name,
-                    "first_digits": str(credit_card.number)[:4],
-                    "last_digits": str(credit_card.number)[-4:],
-                    "expiration_year": int(credit_card.expiration_year),
-                    "expiration_month": int(credit_card.expiration_month),
-                }
-            ),
-            "shipping_information": (
-                {}
-                if shipping_information is None
-                else {
-                    "country": shipping_information.country,
-                    "address": shipping_information.address,
-                    "postal_code": shipping_information.postal_code,
-                    "city": shipping_information.city,
-                    "province": shipping_information.province,
-                }
-            ),
-            "transaction": (
-                {}
-                if transaction is None
-                else {
-                    "id": transaction.id,
-                    "success": transaction.success,
-                    "amount_charged": transaction.amount_charged,
-                }
-            ),
-            "paid": order.paid,
-            "product": {
-                "id": order.product.pid.get_id(),
-                "quantity": order.product.quantity,
-            },
-            "shipping_price": calculate_shipping_price(
-                order.product.pid.weight * order.product.quantity
-            ),
-        }
-    }
+    return order.flatten()
 
 
 def put_order_shipping_information(
     order_id: int,
     email: str,
-    country: str,
-    address: str,
-    postal_code: str,
-    city: str,
-    province: str,
-) -> dict:
+    shipping_information: FlatShippingInformation
+) -> FlatOrder:
     order: Order | None = Order.get_or_none(order_id)
     if order is None:
         raise OrderNotFound()
@@ -220,22 +204,22 @@ def put_order_shipping_information(
     si = order.shipping_information
     if si is None:  # no shipping information yet, create it
         si = ShippingInformation(
-            country=country,
-            address=address,
-            postal_code=postal_code,
-            city=city,
-            province=province,
+            country=shipping_information.country,
+            address=shipping_information.address,
+            postal_code=shipping_information.postal_code,
+            city=shipping_information.city,
+            province=shipping_information.province,
         )
         si.save()
         order.shipping_information = si
         order.email = email
         order.save()
     else:  # shipping information exists, update it
-        si.country = country
-        si.address = address
-        si.postal_code = postal_code
-        si.city = city
-        si.province = province
+        si.country = shipping_information.country
+        si.address = shipping_information.address
+        si.postal_code = shipping_information.postal_code
+        si.city = shipping_information.city
+        si.province = shipping_information.province
         si.save()
         order.email = email
         order.save()
@@ -245,12 +229,8 @@ def put_order_shipping_information(
 
 def put_order_credit_card(
     order_id: int,
-    name: str,
-    number: int,
-    expiration_year: int,
-    cvv: int,
-    expiration_month: int,
-) -> dict:
+    credit_card: FlatCreditCardDetails
+) -> FlatOrder:
     order: Order | None = Order.get_or_none(order_id)
     if order is None:
         raise OrderNotFound()
@@ -260,31 +240,32 @@ def put_order_credit_card(
         db.begin()
         if credit_card is None:  # card does not exist yet
             credit_card = CreditCardDetails(
-                name=name,
-                number=number,
-                expiration_year=expiration_year,
-                cvv=cvv,
-                expiration_month=expiration_month,
+                name=credit_card.name,
+                number=credit_card.number,
+                expiration_year=credit_card.expiration_year,
+                cvv=credit_card.cvv,
+                expiration_month=credit_card.expiration_month,
             )
             credit_card.save()
             order.credit_card = credit_card
             order.save()
         else:  # card exists, update it
-            credit_card.name = name
-            credit_card.number = number
-            credit_card.expiration_year = expiration_year
-            credit_card.cvv = cvv
-            credit_card.expiration_month = expiration_month
+            credit_card.name = credit_card.name
+            credit_card.number = credit_card.number
+            credit_card.expiration_year = credit_card.expiration_year
+            credit_card.cvv = credit_card.cvv
+            credit_card.expiration_month = credit_card.expiration_month
             credit_card.save()
         db.commit()
 
-    order_dict = get_order(order_id)
+    flat_order = get_order(order_id).flatten()
+    order_dict = serialize_order(flat_order)
     transaction_dict = charge(
-        name,
-        number,
-        expiration_year,
-        cvv,
-        expiration_month,
+        credit_card.name,
+        credit_card.number,
+        credit_card.expiration_year,
+        credit_card.cvv,
+        credit_card.expiration_month,
         order_dict["order"]["total_price_tax"] + order_dict["order"]["shipping_price"],
     )["transaction"]
     with db.manual_commit() as _:
@@ -299,4 +280,4 @@ def put_order_credit_card(
         order.save()
         db.commit()
 
-    return get_order(order_id)
+    return flat_order
