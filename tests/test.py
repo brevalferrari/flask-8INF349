@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from json import loads as parse_json
-
+from types import NoneType
 import pytest
 from flask import Response
+from json import dumps as serialize_json
 
 from flaskstarter import create_app
 from flaskstarter.utils.json import Json
@@ -20,6 +20,10 @@ def client():
     yield client
 
 
+def dict_pretty_print(d: dict) -> str:
+    return serialize_json(d, sort_keys=True, indent=4)
+
+
 def test_liste_produits(client):
     attendu = {
         "products": list
@@ -33,25 +37,9 @@ def test_liste_produits(client):
         "weight": int,
         "image": str
     }
-    data: dict = parse_json(client.get("/").get_data())
+    data: dict = client.get("/").get_json()
     assert Json(data).is_like(attendu), "invalid product list schema"
     assert Json(data["products"][0]).is_like(attendu_product), "invalid product schema"
-
-
-# Test des fonctions métiers (calcul prix livraison & carte de crédit)
-# def test_calculate_shipping_price():
-#     assert calculate_shipping_price(100) == 5
-#     assert calculate_shipping_price(600) == 10
-#     assert calculate_shipping_price(2500) == 25
-
-
-# Test récupération des produits (GET /)
-def test_product(client):
-    response = client.get("/")
-    assert response.status_code == 200
-    data = response.get_json()
-    assert "products" in data
-    assert len(data["products"]) > 0
 
 
 # Test création de commande (POST /order)
@@ -73,8 +61,27 @@ def test_get_order(client):
     response = client.get(f"/order/{order_id}")
     assert response.status_code == 200
     data = response.get_json()
-    assert "order" in data
-    assert data["order"]["id"] == int(order_id)
+    assert Json(data).is_like({
+        "order" : {
+            "id" : int,
+            "total_price" : float,
+            "total_price_tax" : NoneType,
+            "email" : NoneType,
+            "credit_card": dict,
+            "shipping_information" : dict,
+            "paid": bool,
+            "transaction": dict,
+            "product" : {
+                "id" : int,
+                "quantity" : int
+            },
+            "shipping_price" : float
+        }
+    }), "shema validation failed, got inner types " + dict_pretty_print({k: str(type(v)) for k, v in data["order"].items()})
+    data = data["order"]
+    assert data["credit_card"] == data["shipping_information"] == data["transaction"] == {}, "optional data not empty"
+    assert data["paid"] == False, "the order isn't paid yet!"
+    assert data["id"] == int(order_id), "wrong order id"
 
 
 # Test mise à jour d'une commande avec adresse et email (PUT /order/<id>)
