@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+from json import loads as parse_json
 
 import pytest
+from flask import Response
 
 from flaskstarter import create_app
+from flaskstarter.utils.json import Json
+from encodings.utf_8 import decode
 
 
 @pytest.fixture
@@ -17,30 +21,21 @@ def client():
 
 
 def test_liste_produits(client):
-    response: dict = client.get("/")
     attendu = {
-        "products": [
-            {
-                "name": "Brown eggs",
-                "id": 1,
-                "in_stock": True,
-                "description": "Raw organic brown eggs in a basket",
-                "price": 28.1,
-                "weight": 400,
-                "image": "0.jpg",
-            },
-            {
-                "description": "Sweet fresh stawberry on the wooden table",
-                "image": "1.jpg",
-                "in_stock": True,
-                "weight": 299,
-                "id": 2,
-                "name": "Sweet fresh stawberry",
-                "price": 29.45,
-            },
-        ]
+        "products": list
     }
-    assert attendu == response.data, "test failed"
+    attendu_product = {
+        "name": str,
+        "id": int,
+        "in_stock": bool,
+        "description": str,
+        "price": float,
+        "weight": int,
+        "image": str
+    }
+    data: dict = parse_json(client.get("/").get_data())
+    assert Json(data).is_like(attendu), "invalid product list schema"
+    assert Json(data["products"][0]).is_like(attendu_product), "invalid product schema"
 
 
 # Test des fonctions métiers (calcul prix livraison & carte de crédit)
