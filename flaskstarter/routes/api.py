@@ -91,7 +91,7 @@ def get_order(order_id: int) -> Response:
     Une fois le processus d'achat initialisé, on peut récupérer la commande complète
     à tout moment avec cette requête GET.
     """
-    return _get_order(order_id)
+    return serialize_order(_get_order(order_id))
 
 
 def add_credit_card(order_id: int, json: dict) -> Response:
@@ -114,7 +114,7 @@ def add_credit_card(order_id: int, json: dict) -> Response:
             }
         }, 422
     else:
-        order = get_order(order_id)
+        order = _get_order(order_id)
         cc = json["credit_card"]
         if order.shipping_information is None:
             return {
@@ -125,7 +125,7 @@ def add_credit_card(order_id: int, json: dict) -> Response:
                     }
                 }
             }, 422
-        if order.transaction.paid:
+        if order.transaction and order.paid:
             return {
                 "errors": {
                     "order": {
@@ -134,17 +134,18 @@ def add_credit_card(order_id: int, json: dict) -> Response:
                     }
                 }
             }, 422
-        if not (card_accepted := True):  # TODO
+        result: FlatOrder = put_order_credit_card(
+            order_id,
+            FlatCreditCardDetails(name=cc["name"], number=int("".join([n for n in cc["number"] if n != " "])), expiration_year=int(cc["expiration_year"]), cvv=int(cc["cvv"]), expiration_month=int(cc["expiration_month"]))
+        )
+        if not result.transaction.success:
             return {
                 "credit_card": {
                     "code": "card-declined",
                     "name": "La carte de crédit a été déclinée.",
                 }
-            }
-        return serialize_order(put_order_credit_card(
-            order_id,
-            FlatCreditCardDetails(name=cc["name"], number=int("".join([n for n in cc["number"] if n != " "])), expiration_year=int(cc["expiration_year"]), cvv=int(cc["cvv"]), expiration_month=int(cc["expiration_month"]))
-        ))
+            }, 422
+        return serialize_order(result)
 
 
 def add_shipping_information(order_id: int, json: dict) -> Response:
