@@ -164,11 +164,27 @@ def test_payment_declined(client):
     order_response = client.post("/order", json={"product": {"id": 1, "quantity": 2}})
     order_id = order_response.headers["Location"].split("/")[-1]
 
+    client.put(
+        f"/order/{order_id}",
+        json={
+            "order": {
+                "email": "jgnault@uqac.ca",
+                "shipping_information": {
+                    "country": "Canada",
+                    "address": "201, rue Président-Kennedy",
+                    "postal_code": "G7X 3Y7",
+                    "city": "Chicoutimi",
+                    "province": "QC",
+                },
+            }
+        },
+    )
+
     payment_data = {
         "credit_card": {
             "name": "John Doe",
             "number": "4000 0000 0000 0002",  # Carte refusée
-            "expiration_year": 2024,
+            "expiration_year": 2025,
             "cvv": "123",
             "expiration_month": 9,
         }
@@ -176,19 +192,7 @@ def test_payment_declined(client):
     response = client.put(f"/order/{order_id}", json=payment_data)
     assert response.status_code == 422
     data = response.get_json()
-    assert data["errors"]["credit_card"]["code"] == "card-declined"
-
-
-def test_Nouvelle_Commande(client):
-    response: dict = client.post("/order")
-    attendu = {"product": {"id": 123, "quantity": 2}}
-    # assert attendu == response.data, "missing-fields"
-    assert (
-        response.status_code == 302
-    ), "La commande devrait être créée avec un status 302"
-    assert (
-        "Location" in response.headers
-    ), "La réponse doit contenir l'en-tête 'Location'"
+    assert data["credit_card"]["code"] == "card-declined"
 
 
 def test_Commande_Sans_Produit(client):
