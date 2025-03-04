@@ -10,7 +10,7 @@ from flaskstarter.model.model import Product, ShippingInformation, ProductOrderQ
 application = create_app()
 
 
-@application.cli.command("initdb")
+@application.cli.command("init-db")
 def initdb(config=DefaultConfig()):
     """Init/reset database."""
     db.close()
