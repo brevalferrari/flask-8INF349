@@ -39,10 +39,10 @@ def calculate_shipping_price(grams: int) -> float:
         float: Prix d'expédition.
     """
     if grams < 0:
-        return 0
+        return 0.0
     elif grams < 500:
-        return 5
+        return 5.0
     elif grams < 2000:
-        return 10
+        return 10.0
     else:
-        return 25
+        return 25.0

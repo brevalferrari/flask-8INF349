@@ -1,4 +1,4 @@
-from urllib.request import Request, urlopen as open
+from urllib.request import HTTPError, Request, urlopen as open
 from json import loads as parse_json, dumps as serialize
 
 
@@ -24,4 +24,7 @@ def charge(
         },
         "amount_charged": amount_charged,
     }
-    return parse_json(open(req, str.encode(serialize(json))).read().decode("utf8"))
+    try:
+        return parse_json(open(req, str.encode(serialize(json))).read().decode())
+    except HTTPError as e:
+        return parse_json(e.fp.read().decode())

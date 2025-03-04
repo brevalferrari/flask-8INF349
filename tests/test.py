@@ -214,8 +214,7 @@ def test_Commande_Sans_Produit(client):
 
 
 def test_Commande_Produit_Hors_Stock(client):
-    # Supposons que le produit 999 est hors stock
-    response = client.post("/order", json={"product": {"id": 999, "quantity": 1}})
+    response = client.post("/order", json={"product": {"id": 4, "quantity": 1}})
 
     # Vérification du code de statut et du message d'erreur attendu
     assert (

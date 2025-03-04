@@ -1,4 +1,3 @@
-from enum import Enum
 from flask import Flask, request, Response
 from flaskstarter.model.model import (
     add_order,
@@ -34,14 +33,14 @@ def response_with_headers(body, status=200, **headers) -> Response:
     return response
 
 
-class ErrorCode(Enum):
+class ErrorCode:
     MISSING_FIELDS = "missing-fields"
     OUT_OF_INVENTORY = "out-of-inventory"
     ALREADY_PAID = "already-paid"
     CARD_DECLINED = "card-declined"
 
 
-def error(message: str, code: ErrorCode) -> Response:
+def product_error(message: str, code: str) -> Response:
     return {
         "errors": {
             "product": {
@@ -51,6 +50,23 @@ def error(message: str, code: ErrorCode) -> Response:
         }
     }, 422
 
+def order_error(message: str, code: str) -> Response:
+    return {
+        "errors": {
+            "order": {
+                "code": code,
+                "name": message,
+            }
+        }
+    }, 422
+
+def credit_card_error(message: str, code: str) -> Response:
+    return {
+        "credit_card": {
+            "code": code,
+            "name": message,
+        }
+    }, 422
 
 api = Flask(__name__)
 
@@ -62,7 +78,7 @@ def list_products() -> Response:
     disponibles pour passer une commande, incluant ceux qui ne sont pas en
     inventaire.
     """
-    return get_products()
+    return {"products": get_products()}
 
 
 @api.post("/order")
@@ -74,11 +90,11 @@ def new_order() -> Response:
     """
     json = request.get_json()
     if not Json(json).is_like(json_schemas.new_order):
-        return error(
+        return product_error(
             "La création d'une commande nécessite un produit", ErrorCode.MISSING_FIELDS
         )
     elif json["product"]["quantity"] < 1:
-        return error(
+        return product_error(
             "La quantité du produit ne peut pas être inférieure à 1",
             ErrorCode.MISSING_FIELDS,
         )
@@ -92,7 +108,7 @@ def new_order() -> Response:
             )
         )
         if not order.products.product.in_stock:
-            return error(
+            return product_error(
                 "Le produit demandé n'est pas en inventaire", ErrorCode.OUT_OF_INVENTORY
             )
         return response_with_headers(
@@ -122,7 +138,7 @@ def add_credit_card(order_id: int, json: dict) -> Response:
         Response: Flask HTTP Response with json data.
     """
     if not Json(json).is_like(json_schemas.put_order_credit_card):
-        return error(
+        return order_error(
             "Il manque un ou plusieurs champs qui sont obligatoires",
             ErrorCode.MISSING_FIELDS,
         )
@@ -130,12 +146,12 @@ def add_credit_card(order_id: int, json: dict) -> Response:
         order = _get_order(order_id)
         cc = json["credit_card"]
         if order.shipping_information is None:
-            return error(
+            return order_error(
                 "Les informations du client sont nécessaire avant d'appliquer une carte de crédit",
                 ErrorCode.MISSING_FIELDS,
             )
         if order.transaction and order.paid:
-            return error("La commande a déjà été payée.", ErrorCode.ALREADY_PAID)
+            return order_error("La commande a déjà été payée.", ErrorCode.ALREADY_PAID)
         result: FlatOrder = put_order_credit_card(
             order_id,
             FlatCreditCardDetails(
@@ -147,7 +163,7 @@ def add_credit_card(order_id: int, json: dict) -> Response:
             ),
         )
         if not result.transaction.success:
-            return error("La carte de crédit a été déclinée.", ErrorCode.CARD_DECLINED)
+            return credit_card_error("La carte de crédit a été déclinée.", ErrorCode.CARD_DECLINED)
         return serialize_order(result)
 
 
@@ -162,7 +178,7 @@ def add_shipping_information(order_id: int, json: dict) -> Response:
         Response: Flask HTTP Response with json data.
     """
     if not Json(json).is_like(json_schemas.put_order_shipping_info):
-        return error(
+        return order_error(
             "Il manque un ou plusieurs champs qui sont obligatoires",
             ErrorCode.MISSING_FIELDS,
         )
