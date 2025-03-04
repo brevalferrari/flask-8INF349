@@ -1,4 +1,4 @@
-from flaskstarter.utils import Json
+from flaskstarter.utils.json import Json
 from flaskstarter.routes import json_schemas
 
 

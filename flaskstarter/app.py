@@ -22,7 +22,15 @@ def create_app(config=None):
             db.begin()
             for p in fetch_products():
                 add_product(
-                    FlatProduct(id=p["id"], name=p["name"], price=p["price"], image=p["image"], in_stock=p["in_stock"], description=p["description"], weight=p["weight"])
+                    FlatProduct(
+                        id=p["id"],
+                        name=p["name"],
+                        price=p["price"],
+                        image=p["image"],
+                        in_stock=p["in_stock"],
+                        description=p["description"],
+                        weight=p["weight"],
+                    )
                 )
             db.commit()
     except:

@@ -1,6 +1,7 @@
 from flaskstarter.model.flat import FlatProduct, FlatOrder
 from flaskstarter.utils.taxes import calculate_tax, calculate_shipping_price
 
+
 class Json:
     _inner: dict
 
@@ -27,6 +28,7 @@ class Json:
                 return False
         return True
 
+
 def serialize_product(product: FlatProduct) -> dict:
     return {
         "name": product.name,
@@ -37,6 +39,7 @@ def serialize_product(product: FlatProduct) -> dict:
         "weight": product.weight,
         "image": product.image,
     }
+
 
 def serialize_order(order: FlatOrder) -> dict:
     total_price = order.products.product.price * order.products.quantity
@@ -87,11 +90,12 @@ def serialize_order(order: FlatOrder) -> dict:
                 "id": order.products.product.id,
                 "quantity": order.products.quantity,
             },
-            "shipping_price":
-                None if order.products.product.weight is None
-                else
-                calculate_shipping_price(
+            "shipping_price": (
+                None
+                if order.products.product.weight is None
+                else calculate_shipping_price(
                     order.products.product.weight * order.products.quantity
-                ),
+                )
+            ),
         }
     }
