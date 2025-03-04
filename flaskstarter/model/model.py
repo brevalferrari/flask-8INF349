@@ -211,7 +211,7 @@ def put_order_credit_card(
             existing_credit_card.save()
         db.commit()
 
-    flat_order = get_order(order_id)
+    flat_order = order.flatten()
     order_dict = serialize_order(flat_order)
     transaction_dict = charge(
         credit_card.name,
@@ -230,7 +230,9 @@ def put_order_credit_card(
         )
         transaction.save(force_insert=True)
         order.transaction = transaction
+        if transaction.success:
+            order.paid = True
         order.save()
         db.commit()
 
-    return flat_order
+    return order.flatten()
