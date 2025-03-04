@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from peewee import (
     CharField,
     BooleanField,
@@ -11,18 +10,9 @@ from peewee import (
 )
 
 from flaskstarter.services.external.chargingapi import charge
-from .extensions import db
-from .utils.json import serialize_order
-
-@dataclass
-class FlatProduct:
-    id: int | None = None
-    name: str
-    in_stock: bool = True
-    description: str | None = None
-    price: float
-    weight: int | None = None
-    image: str
+from flaskstarter.extensions import db
+from flaskstarter.utils.json import serialize_order
+from .flat import FlatProduct, FlatShippingInformation, FlatProductOrderQuantity, FlatCreditCardDetails, FlatTransaction, FlatOrder
 
 class Product(Model):
     name = CharField()
@@ -36,19 +26,11 @@ class Product(Model):
 
     class Meta:
         database = db
-    
+
     def flatten(self)-> FlatProduct:
         """Convert this object to a flat dataclass, cutting every link with the database."""
-        return FlatProduct(id=self.get_id(), name=self.name, in_stock=self.in_stock, description=self.description, price=self.price, weight=self.weight, image=self.image)
+        return FlatProduct(id=self.get_id(), name=str(self.name), in_stock=bool(self.in_stock), description=str(self.description), price=float(self.price), weight=self.weight and int(self.weight), image=str(self.image))
 
-@dataclass
-class FlatShippingInformation:
-    id: int | None = None
-    country: str
-    address: str
-    postal_code: str
-    city: str
-    province: str
 
 class ShippingInformation(Model):
     country = CharField()
@@ -62,14 +44,8 @@ class ShippingInformation(Model):
 
     def flatten(self)-> FlatShippingInformation:
         """Convert this object to a flat dataclass, cutting every link with the database."""
-        return FlatShippingInformation(id=self.get_id(), country=self.country, address=self.address, postal_code=self.postal_code, city=self.city, province=self.province)
+        return FlatShippingInformation(id=self.get_id(), country=str(self.country), address=str(self.address), postal_code=str(self.postal_code), city=str(self.city), province=str(self.province))
 
-@dataclass
-class FlatProductOrderQuantity:
-    id: int | None = None
-    # oid: FlatOrder
-    product: FlatProduct
-    quantity: int
 
 class ProductOrderQuantity(Model):
     # TODO: uncomment line below and move class definition to have multiple products per order (next version)
@@ -79,20 +55,11 @@ class ProductOrderQuantity(Model):
 
     class Meta:
         database = db
-    
+
     def flatten(self)-> FlatProductOrderQuantity:
         """Convert this object to a flat dataclass, cutting every link with the database."""
-        return FlatProductOrderQuantity(id=self.get_id(), product=self.pid.flatten(), quantity=self.quantity)
+        return FlatProductOrderQuantity(id=self.get_id(), product=self.pid.flatten(), quantity=int(self.quantity))
 
-
-@dataclass
-class FlatCreditCardDetails:
-    id: int | None = None
-    name: str
-    number: int
-    expiration_year: int
-    cvv: int
-    expiration_month: int
 
 class CreditCardDetails(Model):
     name = CharField()
@@ -110,13 +77,8 @@ class CreditCardDetails(Model):
 
     def flatten(self)-> FlatCreditCardDetails:
         """Convert this object to a flat dataclass, cutting every link with the database."""
-        return FlatCreditCardDetails(id=self.get_id(), name=self.name, number=self.number, expiration_year=self.expiration_year, cvv=self.cvv, expiration_month=self.expiration_month)
+        return FlatCreditCardDetails(id=self.get_id(), name=str(self.name), number=int(self.number), expiration_year=int(self.expiration_year), cvv=int(self.cvv), expiration_month=int(self.expiration_month))
 
-@dataclass
-class FlatTransaction:
-    id: int | None = None
-    success: bool
-    amount_charged: float
 
 class Transaction(Model):
     id = CharField(max_length=32, primary_key=True)
@@ -125,20 +87,11 @@ class Transaction(Model):
 
     class Meta:
         database = db
-    
+
     def flatten(self)-> FlatTransaction:
         """Convert this object to a flat dataclass, cutting every link with the database."""
-        return FlatTransaction(id=self.id, success=self.success, amount_charged=self.amount_charged)
+        return FlatTransaction(id=str(self.id), success=bool(self.success), amount_charged=float(self.amount_charged))
 
-@dataclass
-class FlatOrder:
-    id: int | None = None
-    products: FlatProductOrderQuantity
-    email: str | None = None
-    credit_card: FlatCreditCardDetails | None = None
-    shipping_information: FlatShippingInformation | None = None
-    transaction: FlatTransaction | None = None
-    paid: bool = False
 
 class Order(Model):
     product = ForeignKeyField(ProductOrderQuantity)
@@ -155,7 +108,7 @@ class Order(Model):
 
     def flatten(self)-> FlatOrder:
         """Convert this object to a flat dataclass, cutting every link with the database."""
-        return FlatOrder(id=self.get_id(), product=self.product, email=self.email, credit_card=self.credit_card.flatten(), shipping_information=self.shipping_information.flatten(), transaction=self.transaction.flatten(), paid=self.paid)
+        return FlatOrder(id=self.get_id(), products=self.product.flatten(), email=self.email and str(self.email), credit_card=self.credit_card and self.credit_card.flatten(), shipping_information=self.shipping_information and self.shipping_information.flatten(), transaction=self.transaction and self.transaction.flatten(), paid=bool(self.paid))
 
 def get_product(product_id: int)-> FlatProduct:
     return Product.get_by_id(product_id).flatten()
@@ -165,7 +118,7 @@ def get_products() -> list[dict]:
 
 
 def add_product(product: FlatProduct):
-    product.save(force_insert=True)
+    Product(name=product.name, in_stock=product.in_stock, description=product.description, price=product.price, weight=product.weight, image=product.image).save(force_insert=True)
 
 
 def drop_products():
@@ -175,9 +128,9 @@ def drop_products():
 def add_order(order: FlatOrder) -> FlatOrder:
     poq = ProductOrderQuantity(pid=Product.get(id=order.products.product.id), quantity=order.products.quantity)
     poq.save()
-    order = Order(product=poq)
-    order.save()
-    return order.flatten()
+    new_order = Order(product=poq)
+    new_order.save()
+    return new_order.flatten()
 
 
 class OrderNotFound(Exception):
@@ -235,36 +188,36 @@ def put_order_credit_card(
     if order is None:
         raise OrderNotFound()
 
-    credit_card: None | CreditCardDetails = order.credit_card
+    existing_credit_card: None | CreditCardDetails = order.credit_card
     with db.manual_commit() as _:
         db.begin()
-        if credit_card is None:  # card does not exist yet
-            credit_card = CreditCardDetails(
+        if existing_credit_card is None:  # card does not exist yet
+            existing_credit_card = CreditCardDetails(
                 name=credit_card.name,
                 number=credit_card.number,
                 expiration_year=credit_card.expiration_year,
                 cvv=credit_card.cvv,
                 expiration_month=credit_card.expiration_month,
             )
-            credit_card.save()
-            order.credit_card = credit_card
+            existing_credit_card.save()
+            order.credit_card = existing_credit_card
             order.save()
         else:  # card exists, update it
-            credit_card.name = credit_card.name
-            credit_card.number = credit_card.number
-            credit_card.expiration_year = credit_card.expiration_year
-            credit_card.cvv = credit_card.cvv
-            credit_card.expiration_month = credit_card.expiration_month
-            credit_card.save()
+            existing_credit_card.name = credit_card.name
+            existing_credit_card.number = credit_card.number
+            existing_credit_card.expiration_year = credit_card.expiration_year
+            existing_credit_card.cvv = credit_card.cvv
+            existing_credit_card.expiration_month = credit_card.expiration_month
+            existing_credit_card.save()
         db.commit()
 
-    flat_order = get_order(order_id).flatten()
+    flat_order = get_order(order_id)
     order_dict = serialize_order(flat_order)
     transaction_dict = charge(
         credit_card.name,
         credit_card.number,
         credit_card.expiration_year,
-        credit_card.cvv,
+        str(credit_card.cvv),
         credit_card.expiration_month,
         order_dict["order"]["total_price_tax"] + order_dict["order"]["shipping_price"],
     )["transaction"]

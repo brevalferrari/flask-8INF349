@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from peewee import Model
 from os import remove as rm
 
 from flaskstarter import create_app
 from flaskstarter.extensions import db
 from flaskstarter.config import DefaultConfig
-from flaskstarter.model import *
+from flaskstarter.model.model import Product, ShippingInformation, ProductOrderQuantity, CreditCardDetails, Transaction, Order
 
 application = create_app()
 
@@ -20,6 +19,6 @@ def initdb(config=DefaultConfig()):
     except FileNotFoundError:
         pass
     db.connect()
-    db.create_tables(Model.__subclasses__())
+    db.create_tables([Product, ShippingInformation, ProductOrderQuantity, CreditCardDetails, Transaction, Order])
 
     # préparation de la base

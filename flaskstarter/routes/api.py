@@ -1,16 +1,13 @@
 from flask import Flask, request, Response
-from flaskstarter.model import (
+from flaskstarter.model.model import (
     add_order,
     get_products,
     get_order as _get_order,
     put_order_credit_card,
     put_order_shipping_information,
-    FlatOrder,
-    FlatProductOrderQuantity,
     get_product,
-    FlatCreditCardDetails,
-    FlatShippingInformation
 )
+from flaskstarter.model.flat import FlatOrder, FlatProductOrderQuantity, FlatCreditCardDetails, FlatShippingInformation
 import flaskstarter.routes.json_schemas as json_schemas
 from flaskstarter.utils.json import Json, serialize_order
 
