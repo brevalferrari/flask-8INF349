@@ -140,7 +140,7 @@ def test_payment_success(client):
         "credit_card": {
             "name": "John Doe",
             "number": "4242 4242 4242 4242",
-            "expiration_year": 2024,
+            "expiration_year": 2025,
             "cvv": "123",
             "expiration_month": 9,
         }
@@ -149,6 +149,14 @@ def test_payment_success(client):
     assert response.status_code == 200
     data = response.get_json()
     assert data["order"]["paid"] is True
+    assert data["order"]["credit_card"] == {
+       "name" : "John Doe",
+       "first_digits" : "4242",
+       "last_digits": "4242",
+       "expiration_year" : 2025,
+       "expiration_month" : 9
+    }, "wrong credit card info"
+
 
 
 # Test carte refusée (PUT /order/<id>)
