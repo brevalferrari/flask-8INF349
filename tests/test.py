@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 from types import NoneType
 import pytest
-from flask import Response
 from json import dumps as serialize_json
 
 from flaskstarter import create_app
 from flaskstarter.utils.json import Json
-from encodings.utf_8 import decode
 
 
 @pytest.fixture
@@ -150,13 +148,12 @@ def test_payment_success(client):
     data = response.get_json()
     assert data["order"]["paid"] is True
     assert data["order"]["credit_card"] == {
-       "name" : "John Doe",
-       "first_digits" : "4242",
-       "last_digits": "4242",
-       "expiration_year" : 2025,
-       "expiration_month" : 9
+        "name": "John Doe",
+        "first_digits": "4242",
+        "last_digits": "4242",
+        "expiration_year": 2025,
+        "expiration_month": 9,
     }, "wrong credit card info"
-
 
 
 # Test carte refusée (PUT /order/<id>)

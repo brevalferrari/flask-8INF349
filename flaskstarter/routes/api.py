@@ -50,6 +50,7 @@ def product_error(message: str, code: str) -> Response:
         }
     }, 422
 
+
 def order_error(message: str, code: str) -> Response:
     return {
         "errors": {
@@ -60,6 +61,7 @@ def order_error(message: str, code: str) -> Response:
         }
     }, 422
 
+
 def credit_card_error(message: str, code: str) -> Response:
     return {
         "credit_card": {
@@ -67,6 +69,7 @@ def credit_card_error(message: str, code: str) -> Response:
             "name": message,
         }
     }, 422
+
 
 api = Flask(__name__)
 
@@ -163,7 +166,9 @@ def add_credit_card(order_id: int, json: dict) -> Response:
             ),
         )
         if not result.transaction.success:
-            return credit_card_error("La carte de crédit a été déclinée.", ErrorCode.CARD_DECLINED)
+            return credit_card_error(
+                "La carte de crédit a été déclinée.", ErrorCode.CARD_DECLINED
+            )
         return serialize_order(result)
 
 

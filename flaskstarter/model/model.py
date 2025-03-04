@@ -234,17 +234,19 @@ def put_order_shipping_information(
 
     return get_order(order_id)
 
+
 def invalid_uuid_generator() -> str:
     result = ""
     for _i in range(32):
-        match randint(0,2):
+        match randint(0, 2):
             case 0:
-                result += chr(randint(48,57))
+                result += chr(randint(48, 57))
             case 1:
-                result += chr(randint(65,90))
+                result += chr(randint(65, 90))
             case 2:
-                result += chr(randint(97,122))
+                result += chr(randint(97, 122))
     return result
+
 
 def put_order_credit_card(
     order_id: int, credit_card: FlatCreditCardDetails
@@ -286,11 +288,11 @@ def put_order_credit_card(
         credit_card.expiration_month,
         order_dict["order"]["total_price_tax"] + order_dict["order"]["shipping_price"],
     )
-    transaction_dict = charging_results["transaction"] if "transaction" in charging_results else {
-        "id": invalid_uuid_generator(),
-        "success": False,
-        "amount_charged": 0.0
-    }
+    transaction_dict = (
+        charging_results["transaction"]
+        if "transaction" in charging_results
+        else {"id": invalid_uuid_generator(), "success": False, "amount_charged": 0.0}
+    )
     with db.manual_commit() as _:
         db.begin()
         transaction = Transaction(
