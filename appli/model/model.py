@@ -10,9 +10,9 @@ from peewee import (
     ForeignKeyField,
 )
 
-from flaskstarter.services.external.chargingapi import charge
-from flaskstarter.extensions import db
-from flaskstarter.utils.json import serialize_order
+from appli.services.external.chargingapi import charge
+from appli.extensions import db
+from appli.utils.json import serialize_order
 from .flat import (
     FlatProduct,
     FlatShippingInformation,

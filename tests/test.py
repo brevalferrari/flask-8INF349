@@ -3,8 +3,8 @@ from types import NoneType
 import pytest
 from json import dumps as serialize_json
 
-from flaskstarter import create_app
-from flaskstarter.utils.json import Json
+from appli import create_app
+from appli.utils.json import Json
 
 
 @pytest.fixture

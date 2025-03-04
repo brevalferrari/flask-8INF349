@@ -1,5 +1,5 @@
-from flaskstarter.utils.json import Json
-from flaskstarter.routes import json_schemas
+from appli.utils.json import Json
+from appli.routes import json_schemas
 
 
 def test_new_order_valid():

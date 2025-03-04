@@ -1,5 +1,5 @@
 from flask import Flask, request, Response
-from flaskstarter.model.model import (
+from appli.model.model import (
     add_order,
     get_products,
     get_order as _get_order,
@@ -7,14 +7,14 @@ from flaskstarter.model.model import (
     put_order_shipping_information,
     get_product,
 )
-from flaskstarter.model.flat import (
+from appli.model.flat import (
     FlatOrder,
     FlatProductOrderQuantity,
     FlatCreditCardDetails,
     FlatShippingInformation,
 )
-import flaskstarter.routes.json_schemas as json_schemas
-from flaskstarter.utils.json import Json, serialize_order
+import appli.routes.json_schemas as json_schemas
+from appli.utils.json import Json, serialize_order
 
 
 def response_with_headers(body, status=200, **headers) -> Response:

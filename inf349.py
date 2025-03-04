@@ -2,10 +2,10 @@
 
 from os import remove as rm
 
-from flaskstarter import create_app
-from flaskstarter.extensions import db
-from flaskstarter.config import DefaultConfig
-from flaskstarter.model.model import Product, ShippingInformation, ProductOrderQuantity, CreditCardDetails, Transaction, Order
+from appli import create_app
+from appli.extensions import db
+from appli.config import DefaultConfig
+from appli.model.model import Product, ShippingInformation, ProductOrderQuantity, CreditCardDetails, Transaction, Order
 
 application = create_app()
 

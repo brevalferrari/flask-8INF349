@@ -1,5 +1,5 @@
-from flaskstarter.model.flat import FlatProduct, FlatOrder
-from flaskstarter.utils.taxes import calculate_tax, calculate_shipping_price
+from appli.model.flat import FlatProduct, FlatOrder
+from appli.utils.taxes import calculate_tax, calculate_shipping_price
 
 
 class Json:

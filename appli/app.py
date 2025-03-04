@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from flaskstarter.model.model import add_product, drop_products
-from flaskstarter.model.flat import FlatProduct
-from flaskstarter.routes.api import api
-from flaskstarter.services.external.productapi import fetch_products
-from flaskstarter.extensions import db
+from appli.model.model import add_product, drop_products
+from appli.model.flat import FlatProduct
+from appli.routes.api import api
+from appli.services.external.productapi import fetch_products
+from appli.extensions import db
 
 
 # For import *
