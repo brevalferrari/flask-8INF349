@@ -25,9 +25,7 @@ def dict_pretty_print(d: dict) -> str:
 
 
 def test_liste_produits(client):
-    attendu = {
-        "products": list
-    }
+    attendu = {"products": list}
     attendu_product = {
         "name": str,
         "id": int,
@@ -35,7 +33,7 @@ def test_liste_produits(client):
         "description": str,
         "price": float,
         "weight": int,
-        "image": str
+        "image": str,
     }
     data: dict = client.get("/").get_json()
     assert Json(data).is_like(attendu), "invalid product list schema"
@@ -61,25 +59,28 @@ def test_get_order(client):
     response = client.get(f"/order/{order_id}")
     assert response.status_code == 200
     data = response.get_json()
-    assert Json(data).is_like({
-        "order" : {
-            "id" : int,
-            "total_price" : float,
-            "total_price_tax" : NoneType,
-            "email" : NoneType,
-            "credit_card": dict,
-            "shipping_information" : dict,
-            "paid": bool,
-            "transaction": dict,
-            "product" : {
-                "id" : int,
-                "quantity" : int
-            },
-            "shipping_price" : float
+    assert Json(data).is_like(
+        {
+            "order": {
+                "id": int,
+                "total_price": float,
+                "total_price_tax": NoneType,
+                "email": NoneType,
+                "credit_card": dict,
+                "shipping_information": dict,
+                "paid": bool,
+                "transaction": dict,
+                "product": {"id": int, "quantity": int},
+                "shipping_price": float,
+            }
         }
-    }), "shema validation failed, got inner types " + dict_pretty_print({k: str(type(v)) for k, v in data["order"].items()})
+    ), "shema validation failed, got inner types " + dict_pretty_print(
+        {k: str(type(v)) for k, v in data["order"].items()}
+    )
     data = data["order"]
-    assert data["credit_card"] == data["shipping_information"] == data["transaction"] == {}, "optional data not empty"
+    assert (
+        data["credit_card"] == data["shipping_information"] == data["transaction"] == {}
+    ), "optional data not empty"
     assert data["paid"] == False, "the order isn't paid yet!"
     assert data["id"] == int(order_id), "wrong order id"
 
@@ -104,6 +105,13 @@ def test_update_order_shipping_info(client):
     response = client.put(f"/order/{order_id}", json=update_data)
     assert response.status_code == 200
     data = response.get_json()
+    assert data["order"]["shipping_information"] == {
+        "country": "Canada",
+        "address": "201, rue Président-Kennedy",
+        "postal_code": "G7X 3Y7",
+        "city": "Chicoutimi",
+        "province": "QC",
+    }, "wrong shipping info"
     assert data["order"]["email"] == "jgnault@uqac.ca"
 
 
