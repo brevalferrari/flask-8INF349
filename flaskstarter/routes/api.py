@@ -34,6 +34,7 @@ def response_with_headers(body, status=200, **headers) -> Response:
 
 
 class ErrorCode:
+    "API error codes."
     MISSING_FIELDS = "missing-fields"
     OUT_OF_INVENTORY = "out-of-inventory"
     ALREADY_PAID = "already-paid"

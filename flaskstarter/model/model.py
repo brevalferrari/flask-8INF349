@@ -72,6 +72,7 @@ class ShippingInformation(Model):
 
 
 class ProductOrderQuantity(Model):
+    "Links a product to its quantity for an order."
     # TODO: uncomment line below and move class definition to have multiple products per order (next version)
     # oid = ForeignKeyField(Order, backref='products')
     pid = ForeignKeyField(Product, backref="order_quantities")
@@ -236,6 +237,11 @@ def put_order_shipping_information(
 
 
 def invalid_uuid_generator() -> str:
+    """Invalid UUID generator
+
+    Returns:
+        str: A random UUID in the style of those from the products API.
+    """
     result = ""
     for _i in range(32):
         match randint(0, 2):
