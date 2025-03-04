@@ -1,3 +1,4 @@
+from enum import Enum
 from flask import Flask, request, Response
 from flaskstarter.model.model import (
     add_order,
@@ -7,7 +8,12 @@ from flaskstarter.model.model import (
     put_order_shipping_information,
     get_product,
 )
-from flaskstarter.model.flat import FlatOrder, FlatProductOrderQuantity, FlatCreditCardDetails, FlatShippingInformation
+from flaskstarter.model.flat import (
+    FlatOrder,
+    FlatProductOrderQuantity,
+    FlatCreditCardDetails,
+    FlatShippingInformation,
+)
 import flaskstarter.routes.json_schemas as json_schemas
 from flaskstarter.utils.json import Json, serialize_order
 
@@ -26,6 +32,24 @@ def response_with_headers(body, status=200, **headers) -> Response:
     for k, val in headers.items():
         response.headers[k] = val
     return response
+
+
+class ErrorCode(Enum):
+    MISSING_FIELDS = "missing-fields"
+    OUT_OF_INVENTORY = "out-of-inventory"
+    ALREADY_PAID = "already-paid"
+    CARD_DECLINED = "card-declined"
+
+
+def error(message: str, code: ErrorCode) -> Response:
+    return {
+        "errors": {
+            "product": {
+                "code": code,
+                "name": message,
+            }
+        }
+    }, 422
 
 
 api = Flask(__name__)
@@ -50,34 +74,27 @@ def new_order() -> Response:
     """
     json = request.get_json()
     if not Json(json).is_like(json_schemas.new_order):
-        return {
-            "errors": {
-                "product": {
-                    "code": "missing-fields",
-                    "name": "La création d'une commande nécessite un produit",
-                }
-            }
-        }, 422
+        return error(
+            "La création d'une commande nécessite un produit", ErrorCode.MISSING_FIELDS
+        )
     elif json["product"]["quantity"] < 1:
-        return {
-            "errors": {
-                "product": {
-                    "code": "missing-fields",
-                    "name": "La quantité du produit ne peut pas être inférieure à 1",
-                }
-            }
-        }, 422
+        return error(
+            "La quantité du produit ne peut pas être inférieure à 1",
+            ErrorCode.MISSING_FIELDS,
+        )
     else:
-        order = add_order(FlatOrder(products=FlatProductOrderQuantity(product=get_product(json["product"]["id"]), quantity=json["product"]["quantity"])))
+        order = add_order(
+            FlatOrder(
+                products=FlatProductOrderQuantity(
+                    product=get_product(json["product"]["id"]),
+                    quantity=json["product"]["quantity"],
+                )
+            )
+        )
         if not order.products.product.in_stock:
-            return {
-                "errors": {
-                    "product": {
-                        "code": "out-of-inventory",
-                        "name": "Le produit demandé n'est pas en inventaire",
-                    }
-                }
-            }, 422
+            return error(
+                "Le produit demandé n'est pas en inventaire", ErrorCode.OUT_OF_INVENTORY
+            )
         return response_with_headers(
             None,
             status=302,
@@ -105,46 +122,32 @@ def add_credit_card(order_id: int, json: dict) -> Response:
         Response: Flask HTTP Response with json data.
     """
     if not Json(json).is_like(json_schemas.put_order_credit_card):
-        return {
-            "errors": {
-                "order": {
-                    "code": "missing-fields",
-                    "name": "Il manque un ou plusieurs champs qui sont obligatoires",
-                }
-            }
-        }, 422
+        return error(
+            "Il manque un ou plusieurs champs qui sont obligatoires",
+            ErrorCode.MISSING_FIELDS,
+        )
     else:
         order = _get_order(order_id)
         cc = json["credit_card"]
         if order.shipping_information is None:
-            return {
-                "errors": {
-                    "order": {
-                        "code": "missing-fields",
-                        "name": "Les informations du client sont nécessaire avant d'appliquer une carte de crédit",
-                    }
-                }
-            }, 422
+            return error(
+                "Les informations du client sont nécessaire avant d'appliquer une carte de crédit",
+                ErrorCode.MISSING_FIELDS,
+            )
         if order.transaction and order.paid:
-            return {
-                "errors": {
-                    "order": {
-                        "code": "already-paid",
-                        "name": "La commande a déjà été payée.",
-                    }
-                }
-            }, 422
+            return error("La commande a déjà été payée.", ErrorCode.ALREADY_PAID)
         result: FlatOrder = put_order_credit_card(
             order_id,
-            FlatCreditCardDetails(name=cc["name"], number=int("".join([n for n in cc["number"] if n != " "])), expiration_year=int(cc["expiration_year"]), cvv=int(cc["cvv"]), expiration_month=int(cc["expiration_month"]))
+            FlatCreditCardDetails(
+                name=cc["name"],
+                number=int("".join([n for n in cc["number"] if n != " "])),
+                expiration_year=int(cc["expiration_year"]),
+                cvv=int(cc["cvv"]),
+                expiration_month=int(cc["expiration_month"]),
+            ),
         )
         if not result.transaction.success:
-            return {
-                "credit_card": {
-                    "code": "card-declined",
-                    "name": "La carte de crédit a été déclinée.",
-                }
-            }, 422
+            return error("La carte de crédit a été déclinée.", ErrorCode.CARD_DECLINED)
         return serialize_order(result)
 
 
@@ -159,22 +162,26 @@ def add_shipping_information(order_id: int, json: dict) -> Response:
         Response: Flask HTTP Response with json data.
     """
     if not Json(json).is_like(json_schemas.put_order_shipping_info):
-        return {
-            "errors": {
-                "order": {
-                    "code": "missing-fields",
-                    "name": "Il manque un ou plusieurs champs qui sont obligatoires",
-                }
-            }
-        }, 422
+        return error(
+            "Il manque un ou plusieurs champs qui sont obligatoires",
+            ErrorCode.MISSING_FIELDS,
+        )
     else:
         o = json["order"]
         s = o["shipping_information"]
-        return serialize_order(put_order_shipping_information(
-            order_id,
-            o["email"],
-            FlatShippingInformation(country=s["country"], address=s["address"], postal_code=s["postal_code"], city=s["city"], province=s["province"])
-        ))
+        return serialize_order(
+            put_order_shipping_information(
+                order_id,
+                o["email"],
+                FlatShippingInformation(
+                    country=s["country"],
+                    address=s["address"],
+                    postal_code=s["postal_code"],
+                    city=s["city"],
+                    province=s["province"],
+                ),
+            )
+        )
 
 
 @api.put("/order/<int:order_id>")

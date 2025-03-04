@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class FlatProduct:
     name: str
@@ -10,6 +11,7 @@ class FlatProduct:
     description: str | None = None
     weight: int | None = None
 
+
 @dataclass
 class FlatShippingInformation:
     country: str
@@ -19,12 +21,14 @@ class FlatShippingInformation:
     province: str
     id: int | None = None
 
+
 @dataclass
 class FlatProductOrderQuantity:
     # oid: FlatOrder
     product: FlatProduct
     quantity: int
     id: int | None = None
+
 
 @dataclass
 class FlatCreditCardDetails:
@@ -35,11 +39,13 @@ class FlatCreditCardDetails:
     expiration_month: int
     id: int | None = None
 
+
 @dataclass
 class FlatTransaction:
     success: bool
     amount_charged: float
     id: str | None = None
+
 
 @dataclass
 class FlatOrder:
